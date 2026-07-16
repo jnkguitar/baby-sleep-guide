@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#101418">
+<title>잠잠 — 아기 수면의식 가이드</title>
+<style>
+  :root {
+    --bg: #101418;
+    --bg-card: #181e24;
+    --bg-raised: #1f262e;
+    --text: #b9c0c7;
+    --text-dim: #7d868f;
+    --text-faint: #58616a;
+    --accent: #c97b3f;
+    --accent-dim: #8a5730;
+    --accent-bg: #2a1f14;
+    --danger: #c05a4e;
+    --danger-bg: #2a1613;
+    --line: #262e36;
+    --ok: #6f9a6f;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif;
+    line-height: 1.55;
+    font-size: 16px;
+  }
+  #app {
+    max-width: 430px;
+    min-height: 100dvh;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  /* ---- top bar ---- */
+  #topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    padding: 8px 12px 6px;
+    display: none;
+  }
+  #topbar.visible { display: block; }
+  .timers { display: flex; gap: 6px; }
+  .timerbox {
+    flex: 1; background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 8px; padding: 5px 8px 6px; text-align: center;
+  }
+  .timerbox .tlabel { font-size: 11px; color: var(--text-faint); letter-spacing: -0.2px; }
+  .timerbox .tval { font-size: 15px; font-variant-numeric: tabular-nums; color: var(--text); }
+  .timerbox.warn { border-color: var(--danger); background: var(--danger-bg); }
+  .timerbox.warn .tval, .timerbox.warn .tlabel { color: var(--danger); }
+  #nonstopWarn {
+    display: none; margin-top: 6px; padding: 7px 10px;
+    background: var(--danger-bg); border: 1px solid var(--danger);
+    border-radius: 8px; font-size: 12.5px; color: var(--danger);
+  }
+  #nonstopWarn.visible { display: block; }
+  #wakelockBtn {
+    margin-top: 6px; width: 100%;
+    background: none; border: 1px dashed var(--line); border-radius: 8px;
+    color: var(--text-faint); font-size: 12px; padding: 5px; cursor: pointer;
+    display: none;
+  }
+  #wakelockBtn.supported { display: block; }
+  #wakelockBtn.on { border-color: var(--accent-dim); color: var(--accent); border-style: solid; }
+  /* ---- screen ---- */
+  #screen { flex: 1; padding: 18px 18px 130px; }
+  .stage-label { font-size: 12.5px; color: var(--accent); letter-spacing: 0.5px; margin-bottom: 6px; }
+  h1 { font-size: 24px; font-weight: 700; color: #d7dce1; margin-bottom: 12px; letter-spacing: -0.3px; }
+  .guide { font-size: 16.5px; color: var(--text); margin-bottom: 18px; }
+  .guide strong { color: #d7dce1; }
+  .bigtimer {
+    text-align: center; margin: 22px 0;
+    font-size: 46px; font-variant-numeric: tabular-nums;
+    color: #d7dce1; font-weight: 300;
+  }
+  .bigtimer .sub { display: block; font-size: 13px; color: var(--text-faint); font-weight: 400; margin-top: 2px; }
+  .btn {
+    display: block; width: 100%; min-height: 60px;
+    border: 1px solid var(--line); border-radius: 12px;
+    background: var(--bg-raised); color: var(--text);
+    font-size: 17px; font-family: inherit; font-weight: 600;
+    padding: 14px 16px; margin-bottom: 10px; cursor: pointer;
+    text-align: center; letter-spacing: -0.2px;
+  }
+  .btn:active { filter: brightness(1.25); }
+  .btn .btn-sub { display: block; font-size: 12.5px; font-weight: 400; color: var(--text-dim); margin-top: 2px; }
+  .btn-primary { background: var(--accent-bg); border-color: var(--accent-dim); color: var(--accent); }
+  .btn-primary .btn-sub { color: var(--accent-dim); }
+  .btn-danger { background: var(--danger-bg); border-color: var(--danger); color: var(--danger); }
+  .btn-quiet { min-height: 48px; font-size: 14.5px; font-weight: 400; color: var(--text-dim); background: none; }
+  .btn-pulse { animation: pulse 1.6s ease-in-out infinite; border-color: var(--accent); }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(201,123,63,0); } 50% { box-shadow: 0 0 0 4px rgba(201,123,63,0.18); } }
+  .note {
+    background: var(--bg-card); border: 1px solid var(--line); border-left: 3px solid var(--accent-dim);
+    border-radius: 8px; padding: 10px 12px; font-size: 14px; color: var(--text-dim); margin-bottom: 16px;
+  }
+  .note.danger { border-left-color: var(--danger); color: var(--danger); }
+  .checklist { list-style: none; margin-bottom: 14px; }
+  .checklist > li {
+    background: var(--bg-card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 8px;
+  }
+  .checklist .group-name { font-size: 12px; color: var(--accent); margin-bottom: 4px; }
+  .checklist .item-label { font-size: 15.5px; color: var(--text); }
+  .checklist .item-check { font-size: 13px; color: var(--text-dim); margin-bottom: 8px; }
+  .item-btn {
+    min-height: 44px; width: 100%; border-radius: 8px; border: 1px solid var(--danger);
+    background: var(--danger-bg); color: var(--danger); font-size: 14.5px; font-weight: 600;
+    font-family: inherit; padding: 8px 10px; margin-top: 6px; cursor: pointer; text-align: left;
+  }
+  .item-btn.cause { border-color: var(--accent-dim); background: var(--accent-bg); color: var(--accent); }
+  .stepdots { display: flex; gap: 5px; margin-bottom: 14px; }
+  .stepdots span { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
+  .stepdots span.done { background: var(--accent-dim); }
+  .stepdots span.now { background: var(--accent); }
+  .stats { width: 100%; border-collapse: collapse; margin: 14px 0 20px; }
+  .stats td { padding: 9px 4px; border-bottom: 1px solid var(--line); font-size: 15px; }
+  .stats td:first-child { color: var(--text-dim); }
+  .stats td:last-child { text-align: right; color: #d7dce1; font-variant-numeric: tabular-nums; }
+  .refs { margin-top: 26px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .refs p { font-size: 12px; color: var(--text-faint); margin-bottom: 4px; }
+  .refs a { color: var(--text-faint); text-decoration: underline; text-underline-offset: 2px; }
+  .disclaimer { font-size: 12px; color: var(--text-faint); margin-top: 14px; }
+  .brand { text-align: center; margin: 34px 0 6px; }
+  .brand .name { font-size: 40px; font-weight: 800; color: #d7dce1; letter-spacing: 2px; }
+  .brand .desc { font-size: 14px; color: var(--text-dim); margin-top: 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .chips .btn { flex: 1 1 40%; margin-bottom: 0; min-height: 56px; }
+  /* ---- bottom bar ---- */
+  #bottombar {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px; z-index: 20;
+    background: var(--bg); border-top: 1px solid var(--line);
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    display: none; gap: 8px;
+  }
+  #bottombar.visible { display: flex; }
+  #bottombar button {
+    flex: 1; min-height: 56px; border-radius: 12px; font-family: inherit;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  #btnRedflag { background: var(--danger-bg); border: 1px solid var(--danger); color: var(--danger); }
+  #btnLimit { background: var(--bg-raised); border: 1px solid var(--line); color: var(--text-dim); }
+  /* ---- overlay ---- */
+  #overlay {
+    position: fixed; inset: 0; z-index: 40; display: none;
+    background: rgba(6, 8, 10, 0.88);
+    overflow-y: auto;
+  }
+  #overlay.visible { display: block; }
+  #overlay .panel {
+    max-width: 430px; margin: 0 auto; min-height: 100dvh;
+    background: var(--bg); padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
+    border-left: 1px solid var(--line); border-right: 1px solid var(--line);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <div class="timers">
+      <div class="timerbox" id="tbFeed"><div class="tlabel">마지막 수유 후</div><div class="tval" id="tvFeed">—</div></div>
+      <div class="timerbox" id="tbHard"><div class="tlabel">누적 강성울음</div><div class="tval" id="tvHard">0:00</div></div>
+      <div class="timerbox" id="tbNonstop"><div class="tlabel">연속 울음</div><div class="tval" id="tvNonstop">—</div></div>
+    </div>
+    <div id="nonstopWarn">연속 울음 90분 경과 — 2시간 병원 기준에 접근하고 있습니다. 그치지 않는 울음이 2시간을 넘으면 진료가 필요합니다.</div>
+    <button id="wakelockBtn" type="button">화면 켜두기: 꺼짐</button>
+  </div>
+  <div id="screen"></div>
+  <div id="bottombar">
+    <button id="btnRedflag" type="button">위험신호 확인</button>
+    <button id="btnLimit" type="button">부모 한계</button>
+  </div>
+  <div id="overlay"><div class="panel" id="overlayPanel"></div></div>
+</div>
+
+<script>
+'use strict';
+
+/* =========================================================
+ * 잠잠 (JamJam) — 아기 수면의식 가이드 MVP
+ * 스펙: 세컨드 브레인 baby-sleep-state-machine v1 (2026-07-17)
+ * 단일 파일 · 프레임워크 없음 · 런타임 네트워크 요청 0회
+ * ========================================================= */
+
+/* ---------- 타이밍 파라미터 (스펙 표 1:1) ---------- */
+const MIN = 60 * 1000;
+const T = {
+  UPRIGHT_BURP: 10 * MIN,        // 수유 후 세워 안기 (기본)
+  UPRIGHT_BURP_SPITTY: 20 * MIN, // 게워냄이 잦은 아기
+  QUIET_TO_ASLEEP: 10 * MIN,     // 잠듦 확정 (사용자 확정 2026-07-17)
+  FUSSING_LIMIT: 20 * MIN,       // AAP 무해 한도 15~20분 → 앱은 20분에 전환
+  BURP_RETRY: 5 * MIN,           // 트림 재시도
+  REFEED_BURP: 5 * MIN,          // 추가 수유 후 짧은 트림
+  REFEED_GATE: 90 * MIN,         // 재수유 게이트: 마지막 수유 후 90분+
+  LADDER_STEP: 2 * MIN,          // 진정계단 칸당 2분 (Karp)
+  HARD_CRY_LIMIT: 30 * MIN,      // 부모 교대 기준: 누적 강성울음 30분
+  NONSTOP_WARN: 90 * MIN,        // 연속 울음 90분 경고
+  NONSTOP_EMERGENCY: 120 * MIN,  // 병원 기준: 연속 울음 2시간 (Seattle Children's)
+};
+
+/* ---------- 근거 출처 (매핑 외 URL 금지 · 책은 텍스트만) ---------- */
+const REFS = {
+  ttokgeRoutine:  { text: '책: 똑게육아 — 일정한 수면의식 루틴' },
+  ttokgeDrowsy:   { text: '책: 똑게육아 — 졸리지만 깨어 있는 상태로 눕히기' },
+  ttokgeCry:      { text: '책: 똑게육아 — AAP 인용, 잠들기 전 15~20분 울음 무해' },
+  ttokgeLadder:   { text: '책: 똑게육아 p.262 — 진정계단' },
+  nhsReflux:      { org: 'NHS "Reflux in babies"', summary: '역류가 잦으면 수유 후 세워 안기 연장', url: 'https://www.nhs.uk/conditions/reflux-in-babies/' },
+  seattleReflux:  { org: 'Seattle Children\'s "Reflux (Spitting Up)"', summary: '평평한 침대에 등을 대고 눕히기', url: 'https://www.seattlechildrens.org/conditions/a-z/reflux-spitting-up/' },
+  kidsHealthCry:  { org: 'KidsHealth "What to Do When Babies Cry"', summary: '울음 원인 확인과 대응', url: 'https://kidshealth.org/en/parents/babies-cry.html' },
+  seattleCrying:  { org: 'Seattle Children\'s "Crying Baby - Before 3 Months Old"', summary: '3개월 미만 울음의 위험신호와 병원 기준', url: 'https://www.seattlechildrens.org/conditions/a-z/crying-baby---before-3-months-old/' },
+  seattleEmerg:   { org: 'Seattle Children\'s "Emergency Symptoms Not to Miss"', summary: '놓치면 안 되는 응급 증상', url: 'https://www.seattlechildrens.org/conditions/a-z/emergency-symptoms-not-to-miss/' },
+  medlineCry:     { org: 'MedlinePlus "Excessive crying in infants"', summary: '영아 과다 울음의 원인', url: 'https://medlineplus.gov/ency/article/003023.htm' },
+  karp5S:         { org: 'Harvey Karp "The 5 S\'s for Soothing Babies"', summary: '기법당 1~2분 관찰, 8~10분 무반응 시 재평가', url: 'https://www.happiestbaby.com/blogs/baby/the-5-s-s-for-soothing-babies' },
+  kaiserHandoff:  { org: 'Kaiser Permanente "Crying Baby: Care Instructions"', summary: '한계 시 아기를 안전히 눕히고 자리 뜨기, 절대 흔들지 않기', url: 'https://healthy.kaiserpermanente.org/health-wellness/health-encyclopedia/he.crying-baby-care-instructions.uh4469' },
+};
+
+const DISCLAIMER = '이 앱은 의료 조언이 아니며 보호자의 판단을 대체하지 않습니다. 응급 상황에서는 즉시 119에 연락하세요.';
+
+/* ---------- 위험신호 4계열 ---------- */
+const REDFLAGS = [
+  { group: '발열', items: [
+    { id: 'fever', label: '38.0°C 이상 (3개월 미만)', critical: false },
+  ]},
+  { group: '호흡', items: [
+    { id: 'apnea', label: '무호흡 — 숨을 쉬지 않음', critical: true },
+    { id: 'cyanosis', label: '청색증 — 입술·얼굴이 파랗게 변함', critical: true },
+    { id: 'gasping', label: '헐떡임·그르렁거림', critical: false },
+    { id: 'retraction', label: '흉부 함몰 — 숨 쉴 때 갈비뼈 사이가 쑥 들어감', critical: false },
+  ]},
+  { group: '의식·긴장도', items: [
+    { id: 'limp', label: '축 처져 반응 없음 (의식 없음)', critical: true },
+    { id: 'seizure', label: '경련', critical: false },
+  ]},
+  { group: '소화', items: [
+    { id: 'projectile', label: '반복적인 분수토', critical: false },
+    { id: 'greenvomit', label: '초록빛 구토', critical: false },
+    { id: 'bloodstool', label: '혈변', critical: false },
+  ]},
+];
+const NONSTOP_FLAG = { id: 'nonstop2h', label: '그치지 않는 울음 2시간 이상', critical: false };
+
+function findFlag(id) {
+  if (id === NONSTOP_FLAG.id) return NONSTOP_FLAG;
+  for (const g of REDFLAGS) for (const it of g.items) if (it.id === id) return it;
+  return null;
+}
+
+/* ---------- 원인 체크 (순서 있는 체크리스트) ---------- */
+const CAUSES = [
+  { id: 'diaper', label: '기저귀', check: '기저귀가 젖었거나 대변을 봤는지 확인하세요.',
+    fix: '조명을 최대한 낮추고 조용히 기저귀를 갈아 주세요. 말을 걸거나 눈을 맞추지 않습니다.' },
+  { id: 'temp', label: '온도·습도', check: '등·목에 땀이 찼는지, 손발이 차가운지, 방이 덥거나 건조한지 확인하세요.',
+    fix: '땀이 났으면 한 겹 벗기고, 손발이 차면 한 겹 더해 주세요. 방 온습도를 조절합니다.' },
+  { id: 'spitup', label: '게워냄', check: '입가·목·옷에 게워낸 흔적이 있는지 확인하세요.',
+    fix: '부드럽게 닦고 젖은 옷을 갈아입혀 주세요.' },
+  { id: 'clothing', label: '옷·스와들 조임, 머리카락', check: '옷·스와들이 너무 조이는지, 손가락·발가락에 머리카락이 감겼는지 확인하세요.',
+    fix: '조임을 풀어 조절하고, 감긴 머리카락이 있으면 제거해 주세요.' },
+];
+
+/* ---------- 진정계단 7칸 ---------- */
+const LADDER = [
+  { title: '존재', desc: '같은 공간에 머무르며 아기가 부모의 존재를 느끼게 하세요. 아직 손대지 않습니다.' },
+  { title: '목소리', desc: '낮은 목소리로 말하거나 노래하거나 "쉬—" 소리를 내세요. 쉬 소리는 울음소리만큼 크게 냅니다.' },
+  { title: '공갈젖꼭지·애착 인형', desc: '공갈젖꼭지를 물리거나 애착 인형을 쥐여 주세요.' },
+  { title: '터칭', desc: '가슴·등·엉덩이를 토닥이거나, 머리·배를 부드럽게 문질러 주세요.' },
+  { title: '눕힌 채 움직이기', desc: '눕힌 상태 그대로 몸을 이리저리 부드럽게 움직여 보세요.' },
+  { title: '안아서 둥가둥가', desc: '안아 올려 부드럽게 둥가둥가 하세요. 잠들기 직전, 깨어 있는 상태로 다시 내려놓습니다.' },
+  { title: '수유 (마지막 수단)', desc: '마지막 수단으로 수유하세요. 진정되면 깨어 있는 상태로 다시 눕힙니다.' },
+];
+
+const PREP_STEPS = ['bath', 'dress', 'move', 'feed', 'burp'];
+
+/* =========================================================
+ * 상태머신 정의 (자료구조 — UI는 이것을 렌더링한다)
+ * on: { 이벤트: { target, action } } / auto: [{ cond, target, action }]
+ * target이 함수면 컨텍스트를 보고 동적으로 결정 (choice 의사상태)
+ * ========================================================= */
+const MACHINE = {
+  bath:    { on: { NEXT: { target: 'dress' } } },
+  dress:   { on: { NEXT: { target: 'move' } } },
+  move:    { on: { NEXT: { target: 'feed' } } },
+  feed:    { on: { NEXT: { target: 'burp', action: 'feedEnd' } } },
+  burp: {
+    on: { DONE: { target: 'settling' } },
+    auto: [{ cond: (s, now) => now - s.stateSince >= burpDuration(s), target: 'settling' }],
+  },
+  settling: {
+    entry: 'enterSettling',
+    on: {
+      QUIET:  { target: 'quiet', action: 'calm' },
+      HICCUP: { action: 'hiccup' },                    // 자기 전이: 무개입 안내 후 유지
+      FUSSY:  { target: 'fussing', action: 'crySoft' },
+      HARD:   { target: 'redflag', action: 'cryHard' },
+    },
+  },
+  quiet: {
+    on: {
+      FUSSY: { target: 'fussing', action: 'crySoft' },
+      HARD:  { target: 'redflag', action: 'cryHard' },
+    },
+    auto: [{ cond: (s, now) => s.quietSince && now - s.quietSince >= T.QUIET_TO_ASLEEP, target: 'asleep' }],
+  },
+  fussing: {
+    on: {
+      QUIET: { target: 'quiet', action: 'calm' },
+      HARD:  { target: 'redflag', action: 'cryHard' },
+    },
+    auto: [{ cond: (s, now) => now - s.stateSince >= T.FUSSING_LIMIT, target: 'causecheck' }],
+  },
+  redflag: {
+    on: {
+      FLAG: { target: 'emergency', action: 'setFlag' },
+      NONE: { target: 'causecheck' },
+    },
+  },
+  causecheck: {
+    on: {
+      FOUND:    { target: 'fixing', action: 'setCause' },
+      NOTFOUND: { target: (s) => s.burpRetryUsed ? resolveHungerGate(s) : 'burpretry' },
+    },
+  },
+  fixing: { on: { FIXED: { target: 'settling' } } },
+  burpretry: {
+    entry: 'markBurpRetry',
+    on: { DONE: { target: 'settling' } },
+    auto: [{ cond: (s, now) => now - s.stateSince >= T.BURP_RETRY, target: 'settling' }],
+  },
+  hungergate: { // 90분+ 자동 충족 시 이 상태를 거치지 않고 refeed로 직행 (resolveHungerGate)
+    on: {
+      HUNGRY:    { target: 'refeed' },
+      NOTHUNGRY: { target: 'ladder', action: 'ladderReset' },
+    },
+  },
+  refeed: { on: { DONE: { target: 'refeedburp', action: 'refeedEnd' } } },
+  refeedburp: {
+    on: { DONE: { target: 'settling' } },
+    auto: [{ cond: (s, now) => now - s.stateSince >= T.REFEED_BURP, target: 'settling' }],
+  },
+  ladder: {
+    on: {
+      CALMED:      { target: 'settling', action: 'calm' },
+      NEXTSTEP:    { action: 'ladderNext' },             // 자동 전환 없음 — 결정은 부모가
+      RECHECK:     { target: 'causecheck', action: 'dismissLadderPrompt' },
+      STAY:        { action: 'dismissLadderPrompt' },
+      L7_FED_CALM: { target: 'settling', action: 'feedEndAndCalm' },
+      L7_FAIL:     { target: (s) => resolveLimitGate(s), action: 'l7Fail' },
+    },
+  },
+  handoff: {
+    on: { RESUME: { target: 'settling', action: 'ladderReset' } },
+    auto: [{ cond: (s, now) => s.nonstopCrySince && now - s.nonstopCrySince >= T.NONSTOP_EMERGENCY,
+             target: 'emergency', action: 'setNonstopFlag' }],
+  },
+  asleep:    { final: true, entry: 'enterAsleep' },
+  emergency: { final: true },
+};
+
+/* choice 의사상태: HungerGate — 마지막 수유 90분+ 이면 자동으로 재수유 */
+function resolveHungerGate(s) {
+  if (s.lastFeedEndAt && Date.now() - s.lastFeedEndAt >= T.REFEED_GATE) return 'refeed';
+  return 'hungergate';
+}
+/* choice 의사상태: LimitGate — 누적 강성울음 30분 이상이면 교대 */
+function resolveLimitGate(s) {
+  return hardCryAccum(s, Date.now()) >= T.HARD_CRY_LIMIT ? 'handoff' : 'settling';
+}
+function burpDuration(s) { return s.spitty ? T.UPRIGHT_BURP_SPITTY : T.UPRIGHT_BURP; }
+
+/* =========================================================
+ * 세션 상태 (컨텍스트 변수 — 스펙 1:1)
+ * ========================================================= */
+const STORAGE_KEY = 'jamjam-session-v1';
+let S = null; // 세션 없음 = 시작 화면
+
+function newSession(startState, lastFeedEndAt, now) {
+  return {
+    state: startState,
+    stateSince: now,
+    startedAt: now,
+    spitty: false,               // 게워냄이 잦은 아기 (트림 시간 연장)
+    lastFeedEndAt: lastFeedEndAt,
+    burpRetryUsed: false,
+    hardCryAccumBase: 0,         // 누적 강성울음(ms) — 확정 누적분
+    hardCrySince: null,          // 진행 중 강성울음 시작 시각
+    nonstopCrySince: null,       // 연속 울음 시작 시각 (병원 2시간 기준) — 누적과 별개
+    cryType: null,               // null | 'fussy' | 'hard'
+    ladderStep: 1,               // 재진입 시 항상 1로 리셋
+    ladderPrompt: false,         // L4 완료(약 8분) 원인 재체크 프롬프트
+    ladderPromptShown: false,    // 세션당 한 번만
+    quietSince: null,
+    hiccupNote: false,
+    settledVia: null,            // settling 진입 경로 (안내 배너용)
+    fixingCause: null,
+    emergencyFlags: [],
+    stats: { laidDownAt: null, asleepAt: null, crySegments: [], causesFound: [] },
+    ended: false,
+  };
+}
+
+function hardCryAccum(s, now) {
+  return s.hardCryAccumBase + (s.hardCrySince ? now - s.hardCrySince : 0);
+}
+
+/* ---------- 울음 추적: 연속(nonstop)과 누적(hardCryAccum)은 별개 ---------- */
+function setCry(s, type, now) {
+  if (s.cryType === type) return;
+  // 진행 중 구간 마감
+  const segs = s.stats.crySegments;
+  if (s.cryType && segs.length && segs[segs.length - 1].end === null) {
+    segs[segs.length - 1].end = now;
+  }
+  if (s.cryType === 'hard' && s.hardCrySince) {
+    s.hardCryAccumBase += now - s.hardCrySince;
+    s.hardCrySince = null;
+  }
+  // 새 구간 시작
+  if (type) {
+    segs.push({ type: type, start: now, end: null });
+    if (!s.nonstopCrySince) s.nonstopCrySince = now;
+    if (type === 'hard') s.hardCrySince = now;
+  } else {
+    s.nonstopCrySince = null; // 진정·잠잠 → 연속 울음 리셋
+  }
+  s.cryType = type;
+}
+
+/* ---------- 액션 ---------- */
+const ACTIONS = {
+  feedEnd(s, now) { s.lastFeedEndAt = now; },
+  refeedEnd(s, now) { s.lastFeedEndAt = now; s.burpRetryUsed = false; }, // 새 수유 = 새 가스 가능성
+  feedEndAndCalm(s, now) { s.lastFeedEndAt = now; setCry(s, null, now); },
+  l7Fail(s, now) { s.lastFeedEndAt = now; s.ladderStep = 1; s.ladderPrompt = false; }, // LimitGate → Settling: ladderStep=1
+  calm(s, now) { setCry(s, null, now); s.quietSince = now; },
+  crySoft(s, now) { setCry(s, 'fussy', now); s.quietSince = null; },
+  cryHard(s, now) { setCry(s, 'hard', now); s.quietSince = null; },
+  hiccup(s, now) { setCry(s, null, now); s.hiccupNote = true; },
+  markBurpRetry(s) { s.burpRetryUsed = true; },
+  ladderReset(s) { s.ladderStep = 1; s.ladderPrompt = false; },
+  ladderNext(s, now) {
+    if (s.ladderStep < 7) {
+      s.ladderStep += 1;
+      s.stateSince = now; // 칸당 2분 타이머 재시작
+      if (s.ladderStep === 5 && !s.ladderPromptShown) { // L4 완료 = 약 8분 시점
+        s.ladderPrompt = true;
+        s.ladderPromptShown = true;
+      }
+    }
+  },
+  dismissLadderPrompt(s) { s.ladderPrompt = false; },
+  setCause(s, now, payload) {
+    s.fixingCause = payload;
+    const c = CAUSES.find((x) => x.id === payload);
+    if (c) s.stats.causesFound.push({ label: c.label, at: now });
+  },
+  setFlag(s, now, payload) { if (!s.emergencyFlags.includes(payload)) s.emergencyFlags.push(payload); },
+  setNonstopFlag(s) { if (!s.emergencyFlags.includes(NONSTOP_FLAG.id)) s.emergencyFlags.push(NONSTOP_FLAG.id); },
+  enterSettling(s, now) {
+    if (!s.stats.laidDownAt) s.stats.laidDownAt = now;
+    s.quietSince = null;
+  },
+  enterAsleep(s, now) {
+    setCry(s, null, now);
+    s.stats.asleepAt = s.quietSince ? s.quietSince + T.QUIET_TO_ASLEEP : now;
+    s.hardCryAccumBase = 0; // 잠듦 확정 시 누적 강성울음 리셋 (사용자 확정)
+    s.hardCrySince = null;
+    s.ended = true;
+  },
+};
+
+/* ---------- 전이 실행 ---------- */
+function dispatch(event, payload) {
+  if (!S || S.ended) return;
+  const def = MACHINE[S.state];
+  const tr = def.on && def.on[event];
+  if (!tr) return;
+  transition(tr, Date.now(), payload);
+}
+
+function transition(tr, now, payload) {
+  if (tr.action) ACTIONS[tr.action](S, now, payload);
+  let target = tr.target;
+  if (typeof target === 'function') target = target(S);
+  if (target) enterState(target, now);
+  save();
+  render();
+}
+
+function enterState(name, now) {
+  const prev = S.state;
+  S.state = name;
+  S.stateSince = now;
+  S.hiccupNote = false;
+  S.settledVia = (name === 'settling') ? prev : null;
+  const def = MACHINE[name];
+  if (def.entry) ACTIONS[def.entry](S, now);
+}
+
+/* 전역 이벤트: 어느 상태에서든 접근 가능 */
+function globalParentLimit() { // 부모 한계 → 안전히 눕힘 확인 후 Handoff
+  const now = Date.now();
+  enterState('handoff', now);
+  save();
+  closeOverlay();
+  render();
+}
+function globalEmergency(flagId) { // 위험신호 오버레이에서 발견
+  const now = Date.now();
+  ACTIONS.setFlag(S, now, flagId);
+  enterState('emergency', now);
+  save();
+  closeOverlay();
+  render();
+}
+
+/* 자동 전이 평가 (1초 틱 + visibilitychange 에서 호출) */
+function evalAuto() {
+  if (!S || S.ended) return;
+  const def = MACHINE[S.state];
+  if (!def.auto) return;
+  const now = Date.now();
+  for (const a of def.auto) {
+    if (a.cond(S, now)) {
+      transition({ target: a.target, action: a.action }, now);
+      return;
+    }
+  }
+}
+
+/* ---------- 저장 / 복구 ---------- */
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); } catch (e) { /* 저장 불가 환경 무시 */ }
+}
+function loadSaved() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (!s || !MACHINE[s.state]) return null;
+    return s;
+  } catch (e) { return null; }
+}
+function clearSaved() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+}
+
+/* =========================================================
+ * 렌더링
+ * ========================================================= */
+const $screen = document.getElementById('screen');
+const $topbar = document.getElementById('topbar');
+const $bottombar = document.getElementById('bottombar');
+const $overlay = document.getElementById('overlay');
+const $overlayPanel = document.getElementById('overlayPanel');
+
+let uiMode = 'start'; // 'start' | 'resume' | 'feedwhen' | 'session'
+
+function esc(t) {
+  return String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function fmtClock(ms) {
+  if (ms < 0) ms = 0;
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+  const mm = (h > 0 && m < 10 ? '0' : '') + m;
+  return (h > 0 ? h + ':' + mm : m) + ':' + (ss < 10 ? '0' : '') + ss;
+}
+function fmtDur(ms) {
+  const m = Math.round(ms / MIN);
+  if (m < 60) return m + '분';
+  return Math.floor(m / 60) + '시간 ' + (m % 60) + '분';
+}
+function refsHtml(keys) {
+  let html = '<div class="refs">';
+  for (const k of keys) {
+    const r = REFS[k];
+    if (r.text) html += '<p>근거: ' + esc(r.text) + '</p>';
+    else html += '<p>근거: <a href="' + r.url + '" target="_blank" rel="noopener">' + esc(r.org) + '</a> — ' + esc(r.summary) + '</p>';
+  }
+  return html + '</div>';
+}
+function btn(event, label, cls, sub, payload) {
+  return '<button type="button" class="btn ' + (cls || '') + '" data-event="' + event + '"' +
+    (payload ? ' data-payload="' + payload + '"' : '') + '>' + esc(label) +
+    (sub ? '<span class="btn-sub">' + esc(sub) + '</span>' : '') + '</button>';
+}
+function prepDots(current) {
+  const idx = PREP_STEPS.indexOf(current);
+  return '<div class="stepdots">' + PREP_STEPS.map((p, i) =>
+    '<span class="' + (i < idx ? 'done' : i === idx ? 'now' : '') + '"></span>').join('') + '</div>';
+}
+
+/* ---------- 화면별 렌더러 (상태머신을 읽어 그린다) ---------- */
+const SCREENS = {
+  bath() {
+    return prepDots('bath') + '<div class="stage-label">준비 1 / 5</div><h1>목욕</h1>' +
+      '<p class="guide">따뜻한 물로 짧게 목욕시키세요. 목욕은 매일 같은 순서로 반복되는 <strong>수면의식의 시작 신호</strong>입니다.</p>' +
+      btn('NEXT', '목욕 완료', 'btn-primary') + refsHtml(['ttokgeRoutine']);
+  },
+  dress() {
+    return prepDots('dress') + '<div class="stage-label">준비 2 / 5</div><h1>기저귀·수면복</h1>' +
+      '<p class="guide">새 기저귀로 갈고 수면복(또는 스와들)을 입히세요.</p>' +
+      btn('NEXT', '입히기 완료', 'btn-primary') + refsHtml(['ttokgeRoutine']);
+  },
+  move() {
+    return prepDots('move') + '<div class="stage-label">준비 3 / 5</div><h1>수면 공간으로 이동</h1>' +
+      '<p class="guide">조명을 낮춘 어두운 수면 공간으로 이동하세요. 지금부터는 <strong>조용하고 지루하게</strong> 진행합니다. 말 걸기·눈 맞춤을 줄이세요.</p>' +
+      btn('NEXT', '이동 완료', 'btn-primary') + refsHtml(['ttokgeRoutine']);
+  },
+  feed() {
+    return prepDots('feed') + '<div class="stage-label">준비 4 / 5</div><h1>마지막 수유</h1>' +
+      '<p class="guide">조용히 마지막 수유를 하세요. 자극 없이, 어둡게.</p>' +
+      btn('NEXT', '수유 끝', 'btn-primary', '수유 종료 시각이 기록됩니다') + refsHtml(['ttokgeRoutine']);
+  },
+  burp(now) {
+    const dur = burpDuration(S);
+    const remain = Math.max(0, dur - (now - S.stateSince));
+    return prepDots('burp') + '<div class="stage-label">준비 5 / 5</div><h1>세워 안고 트림</h1>' +
+      '<p class="guide">세워 안고 트림시키세요. 등을 아래에서 위로 쓸어올리거나 가볍게 두드립니다.</p>' +
+      '<div class="bigtimer"><span data-timer="burp">' + fmtClock(remain) + '</span><span class="sub">남은 시간 — 끝나면 자동으로 눕히기 단계로 넘어갑니다</span></div>' +
+      btn('TOGGLE_SPITTY', S.spitty ? '게워냄이 잦은 아기: 켜짐 (20분)' : '게워냄이 잦은 아기: 꺼짐 (10분)', 'btn-quiet') +
+      btn('DONE', '트림 완료 — 눕히러 가기', 'btn-primary') +
+      refsHtml(['nhsReflux']);
+  },
+  settling() {
+    let banner = '';
+    if (S.hiccupNote) banner = '<div class="note">딸꾹질은 개입하지 않습니다. 아무것도 하지 않고 그대로 두세요.</div>';
+    else if (S.settledVia === 'ladder' || S.settledVia === 'handoff') banner = '<div class="note">진정계단은 1번부터 다시 시작합니다. 우선 눕히고 상태를 지켜보세요.</div>';
+    return '<div class="stage-label">눕히기</div><h1>침대에 눕히세요</h1>' +
+      '<p class="guide"><strong>졸리지만 깨어 있는 상태</strong>로, 평평한 침대에 등을 대고 눕히세요. 경사면 수면은 금지입니다.</p>' + banner +
+      '<p class="guide" style="font-size:14px;color:var(--text-dim)">아기 상태를 선택하세요.</p>' +
+      btn('QUIET', '조용함', 'btn-primary') +
+      btn('HICCUP', '딸꾹질만 함', '') +
+      btn('FUSSY', '칭얼거림 · 가짜울음', '') +
+      btn('HARD', '강성울음', 'btn-danger') +
+      refsHtml(['seattleReflux', 'ttokgeDrowsy']);
+  },
+  quiet(now) {
+    const el = now - (S.quietSince || now);
+    return '<div class="stage-label">관찰</div><h1>조용함 — 지켜보기</h1>' +
+      '<p class="guide">개입하지 않고 지켜보세요. 조용한 상태가 <strong>10분</strong> 유지되면 잠듦으로 확정합니다.</p>' +
+      '<div class="bigtimer"><span data-timer="quiet">' + fmtClock(el) + '</span><span class="sub">조용 유지 시간 / 10:00</span></div>' +
+      btn('FUSSY', '칭얼거리기 시작', '') +
+      btn('HARD', '강성울음 시작', 'btn-danger') +
+      refsHtml(['seattleReflux', 'ttokgeDrowsy']);
+  },
+  fussing(now) {
+    const el = now - S.stateSince;
+    return '<div class="stage-label">관찰</div><h1>칭얼거림 — 개입하지 않기</h1>' +
+      '<p class="guide">개입하지 않고 지켜보세요. 특별한 문제가 없으면 잠들기 전 울음은 <strong>15~20분까지 무해</strong>합니다. 20분이 지나면 원인 체크로 넘어갑니다.</p>' +
+      '<div class="bigtimer"><span data-timer="fussing">' + fmtClock(el) + '</span><span class="sub">칭얼거림 경과 / 20:00</span></div>' +
+      btn('QUIET', '조용해짐', 'btn-primary') +
+      btn('HARD', '강성울음으로 바뀜', 'btn-danger') +
+      refsHtml(['kidsHealthCry', 'ttokgeCry']);
+  },
+  redflag() {
+    let list = '';
+    for (const g of REDFLAGS) {
+      list += '<li><div class="group-name">' + esc(g.group) + '</div>' +
+        g.items.map((it) =>
+          '<button type="button" class="item-btn" data-event="FLAG" data-payload="' + it.id + '">' + esc(it.label) + '</button>'
+        ).join('') + '</li>';
+    }
+    return '<div class="stage-label">강성울음 — 위험신호 확인</div><h1>위험신호가 있나요?</h1>' +
+      '<p class="guide">아래 항목을 빠르게 확인하세요. <strong>1분 안에</strong> 통과하는 것이 목표입니다. 해당 항목이 있으면 누르세요.</p>' +
+      '<ul class="checklist">' + list + '</ul>' +
+      btn('NONE', '해당 없음 — 원인 체크로', 'btn-primary') +
+      refsHtml(['seattleCrying', 'seattleEmerg']);
+  },
+  causecheck() {
+    let list = '';
+    CAUSES.forEach((c, i) => {
+      list += '<li><div class="group-name">' + (i + 1) + '. ' + esc(c.label) + '</div>' +
+        '<div class="item-check">' + esc(c.check) + '</div>' +
+        '<button type="button" class="item-btn cause" data-event="FOUND" data-payload="' + c.id + '">이게 원인 — ' + esc(c.label) + '</button></li>';
+    });
+    const nextHint = S.burpRetryUsed ? '배고픔 확인으로' : '트림 재시도로';
+    return '<div class="stage-label">원인 체크 (약 2분)</div><h1>순서대로 빠르게 확인</h1>' +
+      '<ul class="checklist">' + list + '</ul>' +
+      btn('NOTFOUND', '원인 못 찾음 — ' + nextHint, '') +
+      refsHtml(['kidsHealthCry', 'medlineCry']);
+  },
+  fixing() {
+    const c = CAUSES.find((x) => x.id === S.fixingCause) || CAUSES[0];
+    return '<div class="stage-label">원인 해결 — ' + esc(c.label) + '</div><h1>해결하기</h1>' +
+      '<p class="guide">' + esc(c.fix) + '</p>' +
+      btn('FIXED', '해결 완료 — 다시 눕히기', 'btn-primary') +
+      refsHtml(['kidsHealthCry', 'medlineCry']);
+  },
+  burpretry(now) {
+    const remain = Math.max(0, T.BURP_RETRY - (now - S.stateSince));
+    return '<div class="stage-label">트림 재시도 (세션당 1회)</div><h1>트림 다시 시도</h1>' +
+      '<p class="guide">세워 안고 등을 두드리고, 배를 살짝 압박해 보세요. 먹은 지 30분 안의 울음은 가스일 가능성이 있습니다.</p>' +
+      '<div class="bigtimer"><span data-timer="burpretry">' + fmtClock(remain) + '</span><span class="sub">남은 시간 — 끝나면 자동으로 다시 눕히기로</span></div>' +
+      btn('DONE', '트림 완료 — 다시 눕히기', 'btn-primary') +
+      refsHtml(['nhsReflux']);
+  },
+  hungergate(now) {
+    const feedInfo = S.lastFeedEndAt
+      ? '마지막 수유가 끝난 지 <strong>' + esc(fmtDur(now - S.lastFeedEndAt)) + '</strong> 지났습니다 (90분 미만).'
+      : '마지막 수유 시각이 기록되어 있지 않습니다.';
+    return '<div class="stage-label">배고픔 확인</div><h1>배고픔 신호가 있나요?</h1>' +
+      '<p class="guide">' + feedInfo + '</p>' +
+      '<p class="guide">입을 벌려 젖을 찾거나(루팅), 손을 빠는지 확인하세요.</p>' +
+      '<div class="note">애매하면 공갈젖꼭지를 2~3분 물려 보세요. 쪽쪽이로 진정되면 배고픔이 아닙니다.</div>' +
+      btn('HUNGRY', '배고픔 신호 있음 — 수유하기', 'btn-primary') +
+      btn('NOTHUNGRY', '배고픔 아님 — 진정계단으로', '') +
+      refsHtml(['kidsHealthCry', 'medlineCry']);
+  },
+  refeed(now) {
+    const via = S.lastFeedEndAt && now - S.lastFeedEndAt >= T.REFEED_GATE
+      ? '<div class="note">마지막 수유 후 ' + esc(fmtDur(now - S.lastFeedEndAt)) + ' — 90분이 지나 추가 수유가 권장됩니다.</div>' : '';
+    return '<div class="stage-label">추가 수유</div><h1>수유하세요</h1>' + via +
+      '<p class="guide">조명은 낮게, 자극 없이 조용히 수유하세요.</p>' +
+      btn('DONE', '수유 끝 — 짧은 트림으로', 'btn-primary', '수유 종료 시각이 갱신됩니다') +
+      refsHtml(['kidsHealthCry', 'medlineCry']);
+  },
+  refeedburp(now) {
+    const remain = Math.max(0, T.REFEED_BURP - (now - S.stateSince));
+    return '<div class="stage-label">추가 수유 후</div><h1>짧은 트림</h1>' +
+      '<p class="guide">세워 안고 짧게 트림시키세요.</p>' +
+      '<div class="bigtimer"><span data-timer="refeedburp">' + fmtClock(remain) + '</span><span class="sub">남은 시간 — 끝나면 자동으로 다시 눕히기로</span></div>' +
+      btn('DONE', '트림 완료 — 다시 눕히기', 'btn-primary') +
+      refsHtml(['nhsReflux']);
+  },
+  ladder(now) {
+    const step = LADDER[S.ladderStep - 1];
+    const el = now - S.stateSince;
+    const ready = el >= T.LADDER_STEP;
+    let prompt = '';
+    if (S.ladderPrompt) {
+      prompt = '<div class="note">8분 이상 무반응입니다. 놓친 원인이 없는지 다시 확인해 보세요.</div>' +
+        btn('RECHECK', '원인 다시 확인하기', '') +
+        btn('STAY', '아니요, 계단 계속 진행', 'btn-quiet');
+    }
+    const dots = '<div class="stepdots">' + LADDER.map((_, i) =>
+      '<span class="' + (i + 1 < S.ladderStep ? 'done' : i + 1 === S.ladderStep ? 'now' : '') + '"></span>').join('') + '</div>';
+    let actions;
+    if (S.ladderStep < 7) {
+      actions = btn('CALMED', '진정됨 — 다시 눕히기', 'btn-primary') +
+        btn('NEXTSTEP', '다음 칸: ' + LADDER[S.ladderStep].title, ready ? 'btn-pulse' : '', '2분간 반응이 없을 때 넘어가세요');
+    } else {
+      actions = btn('L7_FED_CALM', '수유로 진정됨 — 다시 눕히기', 'btn-primary', '수유 종료 시각이 갱신됩니다') +
+        btn('L7_FAIL', '수유해도 진정 안 됨', 'btn-danger');
+    }
+    return '<div class="stage-label">진정계단 ' + S.ladderStep + ' / 7</div>' + dots +
+      '<h1>' + esc(step.title) + '</h1>' +
+      '<p class="guide">' + esc(step.desc) + '</p>' +
+      '<div class="bigtimer"><span data-timer="ladder">' + fmtClock(el) + '</span><span class="sub">이 칸 경과 — 칸당 2분 반응 관찰</span></div>' +
+      prompt + actions +
+      refsHtml(['karp5S', 'ttokgeLadder']);
+  },
+  handoff(now) {
+    const accum = hardCryAccum(S, now);
+    return '<div class="stage-label">부모 교대 · 휴식</div><h1>잠시 멈추세요</h1>' +
+      '<p class="guide">부모를 교대하세요. 혼자라면 아기를 침대에 <strong>안전히 등을 대고 눕히고</strong>, 5~10분 자리를 떠나 진정하세요.</p>' +
+      '<div class="note danger">절대 아기를 흔들지 마세요.</div>' +
+      '<p class="guide" style="font-size:14px;color:var(--text-dim)">누적 강성울음 ' + esc(fmtDur(accum)) +
+      (S.nonstopCrySince ? ' · 연속 울음 ' + esc(fmtDur(now - S.nonstopCrySince)) + ' (2시간 이상 지속되면 병원 안내로 전환됩니다)' : '') + '</p>' +
+      btn('RESUME', '진정됐어요 — 다시 눕히기', 'btn-primary', '진정계단은 1번부터 다시 시작') +
+      refsHtml(['kaiserHandoff']);
+  },
+  asleep() {
+    const st = S.stats;
+    const toSleep = st.laidDownAt && st.asleepAt ? st.asleepAt - st.laidDownAt : null;
+    let fussy = 0, hard = 0;
+    for (const seg of st.crySegments) {
+      const dur = (seg.end || st.asleepAt || Date.now()) - seg.start;
+      if (seg.type === 'hard') hard += dur; else fussy += dur;
+    }
+    const causes = st.causesFound.length
+      ? st.causesFound.map((c) => esc(c.label)).join(', ') : '없음';
+    return '<div class="stage-label">세션 종료</div><h1>잠들었습니다</h1>' +
+      '<table class="stats">' +
+      '<tr><td>눕힘 → 잠듦</td><td>' + (toSleep !== null ? esc(fmtDur(toSleep)) : '—') + '</td></tr>' +
+      '<tr><td>칭얼거림 총량</td><td>' + esc(fmtDur(fussy)) + '</td></tr>' +
+      '<tr><td>강성울음 총량</td><td>' + esc(fmtDur(hard)) + '</td></tr>' +
+      '<tr><td>발견한 원인</td><td>' + causes + '</td></tr>' +
+      '</table>' +
+      '<p class="guide" style="font-size:14px;color:var(--text-dim)">수고했어요. 오늘 밤도 무사히.</p>' +
+      btn('NEW_SESSION', '새 세션 시작', '') +
+      '<p class="disclaimer">' + esc(DISCLAIMER) + '</p>';
+  },
+  emergency() {
+    const flags = S.emergencyFlags.map(findFlag).filter(Boolean);
+    const critical = flags.some((f) => f.critical);
+    let top = '';
+    if (critical) {
+      top = '<div class="note danger" style="font-size:17px;font-weight:700;padding:16px">지금 즉시 119에 신고하세요.<br>호흡이 없으면 심폐소생술을 시작하세요.</div>';
+    }
+    const list = flags.length
+      ? '<ul class="checklist">' + flags.map((f) => '<li><div class="item-label">' + esc(f.label) + '</div></li>').join('') + '</ul>' : '';
+    return '<div class="stage-label" style="color:var(--danger)">응급</div><h1>즉시 병원으로</h1>' + top +
+      '<p class="guide">선택된 위험신호:</p>' + list +
+      '<p class="guide">가까운 응급실 또는 소아과 야간진료로 <strong>지금 바로</strong> 이동하세요.</p>' +
+      btn('NEW_SESSION', '세션 종료', 'btn-quiet') +
+      refsHtml(['seattleCrying', 'seattleEmerg']) +
+      '<p class="disclaimer">' + esc(DISCLAIMER) + '</p>';
+  },
+};
+
+/* ---------- 세션 외 화면: 시작 / 이어하기 / 수유 시각 입력 ---------- */
+function renderStart() {
+  $screen.innerHTML =
+    '<div class="brand"><div class="name">잠잠</div><div class="desc">아기 수면의식 가이드 — 지금 할 일 하나만</div></div>' +
+    '<p class="guide" style="font-size:14px;color:var(--text-dim);text-align:center;margin-bottom:22px">생후 4~12주 아기를 위한 실시간 재우기 가이드입니다.<br>버튼만 누르면 다음 한 걸음을 안내합니다.</p>' +
+    btn('START_FULL', '처음부터 시작', 'btn-primary', '목욕 → 기저귀 → 이동 → 수유 → 트림 → 눕히기') +
+    btn('START_SETTLE', '바로 눕히기부터', '', '이미 수유를 마쳤거나 밤중에 깬 경우') +
+    '<p class="disclaimer" style="text-align:center;margin-top:26px">' + esc(DISCLAIMER) + '</p>';
+}
+function renderResume(saved) {
+  const el = Date.now() - saved.startedAt;
+  $screen.innerHTML =
+    '<div class="brand"><div class="name">잠잠</div></div>' +
+    '<p class="guide" style="text-align:center">진행 중인 세션이 있습니다.<br><span style="color:var(--text-dim);font-size:14px">시작한 지 ' + esc(fmtDur(el)) + '</span></p>' +
+    btn('RESUME_SESSION', '이어하기', 'btn-primary') +
+    btn('DISCARD_SESSION', '새로 시작 (기존 세션 삭제)', 'btn-quiet');
+}
+function renderFeedWhen() {
+  $screen.innerHTML =
+    '<div class="stage-label">바로 눕히기</div><h1>마지막 수유가 언제 끝났나요?</h1>' +
+    '<p class="guide" style="font-size:14px;color:var(--text-dim)">추가 수유 판단(90분 기준)에 사용됩니다.</p>' +
+    '<div class="chips">' +
+    btn('FEEDWHEN', '방금 끝남', '', null, '0') +
+    btn('FEEDWHEN', '30분 전', '', null, '30') +
+    btn('FEEDWHEN', '1시간 전', '', null, '60') +
+    btn('FEEDWHEN', '90분 이상 전', '', null, '90') +
+    '</div>' +
+    btn('FEEDWHEN', '모름 — 기록 없이 시작', 'btn-quiet', null, 'unknown') +
+    btn('BACK_START', '뒤로', 'btn-quiet');
+}
+
+/* ---------- 메인 렌더 ---------- */
+function render() {
+  if (uiMode === 'start') { renderStart(); }
+  else if (uiMode === 'resume') { renderResume(loadSaved()); }
+  else if (uiMode === 'feedwhen') { renderFeedWhen(); }
+  else if (uiMode === 'session' && S) {
+    $screen.innerHTML = SCREENS[S.state](Date.now());
+  }
+  const inSession = uiMode === 'session' && S && !S.ended && S.state !== 'emergency';
+  $topbar.classList.toggle('visible', inSession);
+  $bottombar.classList.toggle('visible', inSession);
+  window.scrollTo(0, 0);
+  tickDisplay();
+}
+
+/* ---------- 1초 틱: 표시 갱신 + 자동 전이 (시간 누적은 timestamp 계산으로만) ---------- */
+function tickDisplay() {
+  const now = Date.now();
+  if (S && uiMode === 'session' && !S.ended) {
+    // 상단 타이머 3종
+    document.getElementById('tvFeed').textContent = S.lastFeedEndAt ? fmtDur(now - S.lastFeedEndAt) : '—';
+    const accum = hardCryAccum(S, now);
+    document.getElementById('tvHard').textContent = fmtClock(accum);
+    document.getElementById('tbHard').classList.toggle('warn', accum >= T.HARD_CRY_LIMIT);
+    const nonstop = S.nonstopCrySince ? now - S.nonstopCrySince : null;
+    document.getElementById('tvNonstop').textContent = nonstop !== null ? fmtClock(nonstop) : '—';
+    document.getElementById('tbNonstop').classList.toggle('warn', nonstop !== null && nonstop >= T.NONSTOP_WARN);
+    document.getElementById('nonstopWarn').classList.toggle('visible', nonstop !== null && nonstop >= T.NONSTOP_WARN);
+    // 화면 내 타이머
+    const el = $screen.querySelector('[data-timer]');
+    if (el) {
+      const kind = el.getAttribute('data-timer');
+      if (kind === 'burp') el.textContent = fmtClock(burpDuration(S) - (now - S.stateSince));
+      else if (kind === 'quiet') el.textContent = fmtClock(now - (S.quietSince || now));
+      else if (kind === 'fussing') el.textContent = fmtClock(now - S.stateSince);
+      else if (kind === 'burpretry') el.textContent = fmtClock(T.BURP_RETRY - (now - S.stateSince));
+      else if (kind === 'refeedburp') el.textContent = fmtClock(T.REFEED_BURP - (now - S.stateSince));
+      else if (kind === 'ladder') el.textContent = fmtClock(now - S.stateSince);
+    }
+    // 진정계단 2분 경과 시 다음 칸 버튼 강조
+    if (S.state === 'ladder' && S.ladderStep < 7) {
+      const nextBtn = $screen.querySelector('[data-event="NEXTSTEP"]');
+      if (nextBtn) nextBtn.classList.toggle('btn-pulse', now - S.stateSince >= T.LADDER_STEP);
+    }
+  }
+}
+function tick() {
+  if (uiMode === 'session') evalAuto();
+  tickDisplay();
+}
+setInterval(tick, 1000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    tick();          // 화면 잠금·백그라운드 후 즉시 재평가
+    reacquireWakeLock();
+  } else {
+    if (S) save();
+  }
+});
+
+/* ---------- 이벤트 위임 ---------- */
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-event]');
+  if (!el) return;
+  const ev = el.getAttribute('data-event');
+  const payload = el.getAttribute('data-payload');
+  const now = Date.now();
+
+  // 세션 외 UI 이벤트
+  if (ev === 'START_FULL') { S = newSession('bath', null, now); uiMode = 'session'; save(); render(); return; }
+  if (ev === 'START_SETTLE') { uiMode = 'feedwhen'; render(); return; }
+  if (ev === 'BACK_START') { uiMode = 'start'; render(); return; }
+  if (ev === 'FEEDWHEN') {
+    const lastFeed = payload === 'unknown' ? null : now - parseInt(payload, 10) * MIN;
+    S = newSession('settling', lastFeed, now);
+    ACTIONS.enterSettling(S, now);
+    uiMode = 'session'; save(); render(); return;
+  }
+  if (ev === 'RESUME_SESSION') { S = loadSaved(); uiMode = 'session'; render(); return; }
+  if (ev === 'DISCARD_SESSION') { clearSaved(); S = null; uiMode = 'start'; render(); return; }
+  if (ev === 'NEW_SESSION') { clearSaved(); S = null; uiMode = 'start'; render(); return; }
+  if (ev === 'TOGGLE_SPITTY') { S.spitty = !S.spitty; save(); render(); return; }
+  // 오버레이 이벤트
+  if (ev === 'OVERLAY_CLOSE') { closeOverlay(); return; }
+  if (ev === 'OVERLAY_FLAG') { globalEmergency(payload); return; }
+  if (ev === 'OVERLAY_LIMIT_GO') { globalParentLimit(); return; }
+  // 상태머신 이벤트
+  dispatch(ev, payload);
+});
+
+/* ---------- 전역 오버레이: 위험신호 확인 / 부모 한계 ---------- */
+function openRedflagOverlay() {
+  let list = '';
+  for (const g of REDFLAGS) {
+    list += '<li><div class="group-name">' + esc(g.group) + '</div>' +
+      g.items.map((it) =>
+        '<button type="button" class="item-btn" data-event="OVERLAY_FLAG" data-payload="' + it.id + '">' + esc(it.label) + '</button>'
+      ).join('') + '</li>';
+  }
+  $overlayPanel.innerHTML = '<h1>위험신호 확인</h1>' +
+    '<p class="guide">해당 항목이 있으면 누르세요. 현재 진행과 타이머는 그대로 유지됩니다.</p>' +
+    '<ul class="checklist">' + list + '</ul>' +
+    btn('OVERLAY_CLOSE', '해당 없음 — 돌아가기', 'btn-primary') +
+    refsHtml(['seattleCrying', 'seattleEmerg']);
+  $overlay.classList.add('visible');
+}
+function openLimitOverlay() {
+  $overlayPanel.innerHTML = '<h1>부모 한계</h1>' +
+    '<p class="guide">괜찮습니다. 먼저 아기를 침대에 <strong>안전히 등을 대고</strong> 눕히세요.</p>' +
+    '<div class="note danger">절대 아기를 흔들지 마세요.</div>' +
+    btn('OVERLAY_LIMIT_GO', '눕혔어요 — 교대·휴식으로', 'btn-primary') +
+    btn('OVERLAY_CLOSE', '취소', 'btn-quiet') +
+    refsHtml(['kaiserHandoff']);
+  $overlay.classList.add('visible');
+}
+function closeOverlay() { $overlay.classList.remove('visible'); $overlayPanel.innerHTML = ''; }
+document.getElementById('btnRedflag').addEventListener('click', openRedflagOverlay);
+document.getElementById('btnLimit').addEventListener('click', openLimitOverlay);
+
+/* ---------- 이탈 경고 ---------- */
+window.addEventListener('beforeunload', (e) => {
+  if (uiMode === 'session' && S && !S.ended) {
+    save();
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+/* ---------- Screen Wake Lock (미지원 브라우저에서는 숨김) ---------- */
+let wakeLock = null;
+let wakeLockWanted = false;
+const $wakeBtn = document.getElementById('wakelockBtn');
+if ('wakeLock' in navigator) {
+  $wakeBtn.classList.add('supported');
+  $wakeBtn.addEventListener('click', async () => {
+    wakeLockWanted = !wakeLockWanted;
+    if (wakeLockWanted) await requestWakeLock(); else await releaseWakeLock();
+    updateWakeBtn();
+  });
+}
+async function requestWakeLock() {
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; updateWakeBtn(); });
+  } catch (e) { wakeLock = null; wakeLockWanted = false; }
+}
+async function releaseWakeLock() {
+  if (wakeLock) { try { await wakeLock.release(); } catch (e) {} wakeLock = null; }
+}
+function reacquireWakeLock() {
+  if (wakeLockWanted && !wakeLock) requestWakeLock().then(updateWakeBtn);
+}
+function updateWakeBtn() {
+  $wakeBtn.textContent = '화면 켜두기: ' + (wakeLock ? '켜짐' : '꺼짐');
+  $wakeBtn.classList.toggle('on', !!wakeLock);
+}
+
+/* ---------- 초기화: 진행 중 세션 복구 ---------- */
+(function init() {
+  const saved = loadSaved();
+  if (saved && !saved.ended) uiMode = 'resume';
+  else uiMode = 'start';
+  render();
+})();
+</script>
+</body>
+</html>
