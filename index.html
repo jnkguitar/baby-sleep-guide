@@ -13,13 +13,15 @@
     --text: #b9c0c7;
     --text-dim: #7d868f;
     --text-faint: #58616a;
-    --accent: #c97b3f;
+    --accent: #c97b3f;   /* 주황: 강성울음 + 기본 강조 */
     --accent-dim: #8a5730;
     --accent-bg: #2a1f14;
-    --danger: #c05a4e;
-    --danger-bg: #2a1613;
+    --danger: #c94f52;   /* 빨강: 위험신호·응급 */
+    --danger-bg: #2a1315;
+    --calm: #6faa77;     /* 초록: 조용함·진정됨 */
+    --calm-dim: #4a7a54;
+    --calm-bg: #14231a;
     --line: #262e36;
-    --ok: #6f9a6f;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
@@ -56,6 +58,8 @@
   .timerbox .tval { font-size: 15px; font-variant-numeric: tabular-nums; color: var(--text); }
   .timerbox.warn { border-color: var(--danger); background: var(--danger-bg); }
   .timerbox.warn .tval, .timerbox.warn .tlabel { color: var(--danger); }
+  .timerbox.warn-hard { border-color: var(--accent); background: var(--accent-bg); }
+  .timerbox.warn-hard .tval, .timerbox.warn-hard .tlabel { color: var(--accent); }
   #nonstopWarn {
     display: none; margin-top: 6px; padding: 7px 10px;
     background: var(--danger-bg); border: 1px solid var(--danger);
@@ -95,6 +99,10 @@
   .btn-primary { background: var(--accent-bg); border-color: var(--accent-dim); color: var(--accent); }
   .btn-primary .btn-sub { color: var(--accent-dim); }
   .btn-danger { background: var(--danger-bg); border-color: var(--danger); color: var(--danger); }
+  .btn-calm { background: var(--calm-bg); border-color: var(--calm-dim); color: var(--calm); }
+  .btn-calm .btn-sub { color: var(--calm-dim); }
+  .btn-hard { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+  .btn-hard .btn-sub { color: var(--accent-dim); }
   .btn-quiet { min-height: 48px; font-size: 14.5px; font-weight: 400; color: var(--text-dim); background: none; }
   .btn-pulse { animation: pulse 1.6s ease-in-out infinite; border-color: var(--accent); }
   @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(201,123,63,0); } 50% { box-shadow: 0 0 0 4px rgba(201,123,63,0.18); } }
@@ -659,10 +667,10 @@ const SCREENS = {
     return '<div class="stage-label">눕히기</div><h1>침대에 눕히세요</h1>' +
       '<p class="guide"><strong>졸리지만 깨어 있는 상태</strong>로, 평평한 침대에 등을 대고 눕히세요. 경사면 수면은 금지입니다.</p>' + banner +
       '<p class="guide" style="font-size:14px;color:var(--text-dim)">아기 상태를 선택하세요.</p>' +
-      btn('QUIET', '조용함', 'btn-primary') +
+      btn('QUIET', '조용함', 'btn-calm') +
       btn('HICCUP', '딸꾹질만 함', '') +
       btn('FUSSY', '칭얼거림 · 가짜울음', '') +
-      btn('HARD', '강성울음', 'btn-danger') +
+      btn('HARD', '강성울음', 'btn-hard') +
       refsHtml(['seattleReflux', 'ttokgeDrowsy']);
   },
   quiet(now) {
@@ -671,7 +679,7 @@ const SCREENS = {
       '<p class="guide">개입하지 않고 지켜보세요. 조용한 상태가 <strong>10분</strong> 유지되면 잠듦으로 확정합니다.</p>' +
       '<div class="bigtimer"><span data-timer="quiet">' + fmtClock(el) + '</span><span class="sub">조용 유지 시간 / 10:00</span></div>' +
       btn('FUSSY', '칭얼거리기 시작', '') +
-      btn('HARD', '강성울음 시작', 'btn-danger') +
+      btn('HARD', '강성울음 시작', 'btn-hard') +
       refsHtml(['seattleReflux', 'ttokgeDrowsy']);
   },
   fussing(now) {
@@ -679,8 +687,8 @@ const SCREENS = {
     return '<div class="stage-label">관찰</div><h1>칭얼거림 — 개입하지 않기</h1>' +
       '<p class="guide">개입하지 않고 지켜보세요. 특별한 문제가 없으면 잠들기 전 울음은 <strong>15~20분까지 무해</strong>합니다. 20분이 지나면 원인 체크로 넘어갑니다.</p>' +
       '<div class="bigtimer"><span data-timer="fussing">' + fmtClock(el) + '</span><span class="sub">칭얼거림 경과 / 20:00</span></div>' +
-      btn('QUIET', '조용해짐', 'btn-primary') +
-      btn('HARD', '강성울음으로 바뀜', 'btn-danger') +
+      btn('QUIET', '조용해짐', 'btn-calm') +
+      btn('HARD', '강성울음으로 바뀜', 'btn-hard') +
       refsHtml(['kidsHealthCry', 'ttokgeCry']);
   },
   redflag() {
@@ -743,7 +751,7 @@ const SCREENS = {
     let cryUi = '';
     if (S.feedPausedCry) {
       cryUi = '<div class="note">수유 중에는 울음이 잦아드는 경우가 많아 울음 타이머를 멈췄습니다. 계속 울면서 먹고 있다면 아래 버튼을 눌러 주세요.</div>' +
-        btn('STILL_CRYING', '계속 울면서 먹고 있어요', '', '수유 시작 시점부터 이어서 집계합니다');
+        btn('STILL_CRYING', '계속 울면서 먹고 있어요', 'btn-hard', '수유 시작 시점부터 이어서 집계합니다');
     } else if (S.cryType) {
       cryUi = '<div class="note">울음 타이머가 계속 집계되고 있습니다.</div>';
     }
@@ -774,11 +782,11 @@ const SCREENS = {
       '<span class="' + (i + 1 < S.ladderStep ? 'done' : i + 1 === S.ladderStep ? 'now' : '') + '"></span>').join('') + '</div>';
     let actions;
     if (S.ladderStep < 7) {
-      actions = btn('CALMED', '진정됨 — 다시 눕히기', 'btn-primary') +
+      actions = btn('CALMED', '진정됨 — 다시 눕히기', 'btn-calm') +
         btn('NEXTSTEP', '다음 칸: ' + LADDER[S.ladderStep].title, ready ? 'btn-pulse' : '', '2분간 반응이 없을 때 넘어가세요');
     } else {
-      actions = btn('L7_FED_CALM', '수유로 진정됨 — 다시 눕히기', 'btn-primary', '수유 종료 시각이 갱신됩니다') +
-        btn('L7_FAIL', '수유해도 진정 안 됨', 'btn-danger');
+      actions = btn('L7_FED_CALM', '수유로 진정됨 — 다시 눕히기', 'btn-calm', '수유 종료 시각이 갱신됩니다') +
+        btn('L7_FAIL', '수유해도 진정 안 됨', 'btn-hard');
     }
     return '<div class="stage-label">진정계단 ' + S.ladderStep + ' / 7</div>' + dots +
       '<h1>' + esc(step.title) + '</h1>' +
@@ -794,7 +802,7 @@ const SCREENS = {
       '<div class="note danger">절대 아기를 흔들지 마세요.</div>' +
       '<p class="guide" style="font-size:14px;color:var(--text-dim)">누적 강성울음 ' + esc(fmtDur(accum)) +
       (S.nonstopCrySince ? ' · 연속 울음 ' + esc(fmtDur(now - S.nonstopCrySince)) + ' (2시간 이상 지속되면 병원 안내로 전환됩니다)' : '') + '</p>' +
-      btn('RESUME', '진정됐어요 — 다시 눕히기', 'btn-primary', '진정계단은 1번부터 다시 시작') +
+      btn('RESUME', '진정됐어요 — 다시 눕히기', 'btn-calm', '진정계단은 1번부터 다시 시작') +
       refsHtml(['kaiserHandoff']);
   },
   asleep() {
@@ -890,7 +898,7 @@ function tickDisplay() {
     document.getElementById('tvFeed').textContent = S.lastFeedEndAt ? fmtDur(now - S.lastFeedEndAt) : '—';
     const accum = hardCryAccum(S, now);
     document.getElementById('tvHard').textContent = fmtClock(accum);
-    document.getElementById('tbHard').classList.toggle('warn', accum >= T.HARD_CRY_LIMIT);
+    document.getElementById('tbHard').classList.toggle('warn-hard', accum >= T.HARD_CRY_LIMIT);
     const nonstop = S.nonstopCrySince ? now - S.nonstopCrySince : null;
     document.getElementById('tvNonstop').textContent = nonstop !== null ? fmtClock(nonstop) : '—';
     document.getElementById('tbNonstop').classList.toggle('warn', nonstop !== null && nonstop >= T.NONSTOP_WARN);
