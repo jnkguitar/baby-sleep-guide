@@ -103,6 +103,7 @@
   .btn-calm .btn-sub { color: var(--calm-dim); }
   .btn-hard { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
   .btn-hard .btn-sub { color: var(--accent-dim); }
+  .btn-cry { min-height: 48px; font-size: 14.5px; font-weight: 400; background: none; border: 1px dashed var(--accent-dim); color: var(--accent); }
   .btn-quiet { min-height: 48px; font-size: 14.5px; font-weight: 400; color: var(--text-dim); background: none; }
   .btn-pulse { animation: pulse 1.6s ease-in-out infinite; border-color: var(--accent); }
   @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(201,123,63,0); } 50% { box-shadow: 0 0 0 4px rgba(201,123,63,0.18); } }
@@ -384,6 +385,13 @@ const MACHINE = {
   emergency: { final: true },
 };
 
+/* 준비·처치 단계에서도 강성울음을 집계한다 (2026-07-17 사용자 결정).
+ * 기본은 울지 않음. [크게 울면서 ~중이에요] 버튼으로 시작, [울음 그쳤어요]로 종료. */
+for (const name of ['bath', 'dress', 'move', 'feed', 'burp', 'burpretry', 'fixing']) {
+  MACHINE[name].on.CRY_HARD_START = { action: 'cryHard' };
+  MACHINE[name].on.CRY_STOPPED = { action: 'calm' };
+}
+
 /* choice 의사상태: HungerGate — 마지막 수유 90분+ 이면 자동으로 재수유 */
 function resolveHungerGate(s) {
   if (s.lastFeedEndAt && Date.now() - s.lastFeedEndAt >= T.REFEED_GATE) return 'refeed';
@@ -628,6 +636,13 @@ function btn(event, label, cls, sub, payload) {
     (payload ? ' data-payload="' + payload + '"' : '') + '>' + esc(label) +
     (sub ? '<span class="btn-sub">' + esc(sub) + '</span>' : '') + '</button>';
 }
+function cryWidget(startLabel) {
+  if (S.cryType === 'hard') {
+    return '<div class="note" style="border-left-color:var(--accent)">강성울음 타이머 집계 중 — 울음이 그치면 눌러 주세요.</div>' +
+      btn('CRY_STOPPED', '울음 그쳤어요', 'btn-calm');
+  }
+  return btn('CRY_HARD_START', startLabel, 'btn-cry');
+}
 function prepDots(current) {
   const idx = PREP_STEPS.indexOf(current);
   return '<div class="stepdots">' + PREP_STEPS.map((p, i) =>
@@ -639,22 +654,22 @@ const SCREENS = {
   bath() {
     return prepDots('bath') + '<div class="stage-label">준비 1 / 5</div><h1>목욕</h1>' +
       '<p class="guide">따뜻한 물로 짧게 목욕시키세요. 목욕은 매일 같은 순서로 반복되는 <strong>수면의식의 시작 신호</strong>입니다.</p>' +
-      btn('NEXT', '목욕 완료', 'btn-primary') + refsHtml(['ttokgeRoutine']);
+      btn('NEXT', '목욕 완료', 'btn-primary') + cryWidget('크게 울면서 목욕 중이에요') + refsHtml(['ttokgeRoutine']);
   },
   dress() {
     return prepDots('dress') + '<div class="stage-label">준비 2 / 5</div><h1>기저귀·수면복</h1>' +
       '<p class="guide">새 기저귀로 갈고 수면복(또는 스와들)을 입히세요.</p>' +
-      btn('NEXT', '입히기 완료', 'btn-primary') + refsHtml(['ttokgeRoutine']);
+      btn('NEXT', '입히기 완료', 'btn-primary') + cryWidget('크게 울면서 입히는 중이에요') + refsHtml(['ttokgeRoutine']);
   },
   move() {
     return prepDots('move') + '<div class="stage-label">준비 3 / 5</div><h1>수면 공간으로 이동</h1>' +
       '<p class="guide">조명을 낮춘 어두운 수면 공간으로 이동하세요. 지금부터는 <strong>조용하고 지루하게</strong> 진행합니다. 말 걸기·눈 맞춤을 줄이세요.</p>' +
-      btn('NEXT', '이동 완료', 'btn-primary') + refsHtml(['ttokgeRoutine']);
+      btn('NEXT', '이동 완료', 'btn-primary') + cryWidget('크게 울면서 이동 중이에요') + refsHtml(['ttokgeRoutine']);
   },
   feed() {
     return prepDots('feed') + '<div class="stage-label">준비 4 / 5</div><h1>마지막 수유</h1>' +
       '<p class="guide">조용히 마지막 수유를 하세요. 자극 없이, 어둡게.</p>' +
-      btn('NEXT', '수유 끝', 'btn-primary', '수유 종료 시각이 기록됩니다') + refsHtml(['ttokgeRoutine']);
+      btn('NEXT', '수유 끝', 'btn-primary', '수유 종료 시각이 기록됩니다') + cryWidget('크게 울면서 먹고 있어요') + refsHtml(['ttokgeRoutine']);
   },
   burp(now) {
     const dur = burpDuration(S);
@@ -664,6 +679,7 @@ const SCREENS = {
       '<div class="bigtimer"><span data-timer="burp">' + fmtClock(remain) + '</span><span class="sub">남은 시간 — 끝나면 자동으로 눕히기 단계로 넘어갑니다</span></div>' +
       btn('TOGGLE_SPITTY', S.spitty ? '게워냄이 잦은 아기: 켜짐 (20분)' : '게워냄이 잦은 아기: 꺼짐 (10분)', 'btn-quiet') +
       btn('DONE', '트림 완료 — 눕히러 가기', 'btn-primary') +
+      cryWidget('크게 울면서 트림 중이에요') +
       refsHtml(['nhsReflux']);
   },
   settling() {
@@ -729,6 +745,7 @@ const SCREENS = {
     return '<div class="stage-label">원인 해결 — ' + esc(c.label) + '</div><h1>해결하기</h1>' +
       '<p class="guide">' + esc(c.fix) + '</p>' +
       btn('FIXED', '해결 완료 — 다시 눕히기', 'btn-primary') +
+      cryWidget('계속 크게 울고 있어요') +
       refsHtml(['kidsHealthCry', 'medlineCry']);
   },
   burpretry(now) {
@@ -737,6 +754,7 @@ const SCREENS = {
       '<p class="guide">세워 안고 등을 두드리고, 배를 살짝 압박해 보세요. 먹은 지 30분 안의 울음은 가스일 가능성이 있습니다.</p>' +
       '<div class="bigtimer"><span data-timer="burpretry">' + fmtClock(remain) + '</span><span class="sub">남은 시간 — 끝나면 자동으로 다시 눕히기로</span></div>' +
       btn('DONE', '트림 완료 — 다시 눕히기', 'btn-primary') +
+      cryWidget('크게 울면서 트림 중이에요') +
       refsHtml(['nhsReflux']);
   },
   hungergate(now) {
