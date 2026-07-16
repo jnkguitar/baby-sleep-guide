@@ -340,7 +340,13 @@ const MACHINE = {
       NOTHUNGRY: { target: 'ladder', action: 'ladderReset' },
     },
   },
-  refeed: { on: { DONE: { target: 'refeedburp', action: 'refeedEnd' } } },
+  refeed: { // 수유 중에는 울음이 잦아드는 경우가 많아 타이머를 기본 일시정지 (2026-07-17 사용자 결정)
+    entry: 'pauseCryForFeed',
+    on: {
+      DONE: { target: 'refeedburp', action: 'refeedEnd' },
+      STILL_CRYING: { action: 'resumeCryDuringFeed' },
+    },
+  },
   refeedburp: {
     on: { DONE: { target: 'settling' } },
     auto: [{ cond: (s, now) => now - s.stateSince >= T.REFEED_BURP, target: 'settling' }],
@@ -400,6 +406,7 @@ function newSession(startState, lastFeedEndAt, now) {
     hiccupNote: false,
     settledVia: null,            // settling 진입 경로 (안내 배너용)
     fixingCause: null,
+    feedPausedCry: null,         // 추가 수유 중 일시정지된 울음 스냅샷 {type, nonstopSince, pausedAt}
     emergencyFlags: [],
     stats: { laidDownAt: null, asleepAt: null, crySegments: [], causesFound: [] },
     ended: false,
@@ -436,7 +443,22 @@ function setCry(s, type, now) {
 /* ---------- 액션 ---------- */
 const ACTIONS = {
   feedEnd(s, now) { s.lastFeedEndAt = now; },
-  refeedEnd(s, now) { s.lastFeedEndAt = now; s.burpRetryUsed = false; }, // 새 수유 = 새 가스 가능성
+  refeedEnd(s, now) { s.lastFeedEndAt = now; s.burpRetryUsed = false; s.feedPausedCry = null; }, // 새 수유 = 새 가스 가능성
+  pauseCryForFeed(s, now) {
+    if (s.cryType) {
+      s.feedPausedCry = { type: s.cryType, nonstopSince: s.nonstopCrySince, pausedAt: now };
+      setCry(s, null, now);
+    } else {
+      s.feedPausedCry = null;
+    }
+  },
+  resumeCryDuringFeed(s, now) {
+    const p = s.feedPausedCry;
+    if (!p) return;
+    setCry(s, p.type, p.pausedAt);      // 수유 시작 시점부터 소급해 이어서 집계
+    s.nonstopCrySince = p.nonstopSince; // 연속 울음도 끊기지 않은 것으로 복원
+    s.feedPausedCry = null;
+  },
   feedEndAndCalm(s, now) { s.lastFeedEndAt = now; setCry(s, null, now); },
   l7Fail(s, now) { s.lastFeedEndAt = now; s.ladderStep = 1; s.ladderPrompt = false; }, // LimitGate → Settling: ladderStep=1
   calm(s, now) { setCry(s, null, now); s.quietSince = now; },
@@ -718,8 +740,15 @@ const SCREENS = {
   refeed(now) {
     const via = S.lastFeedEndAt && now - S.lastFeedEndAt >= T.REFEED_GATE
       ? '<div class="note">마지막 수유 후 ' + esc(fmtDur(now - S.lastFeedEndAt)) + ' — 90분이 지나 추가 수유가 권장됩니다.</div>' : '';
+    let cryUi = '';
+    if (S.feedPausedCry) {
+      cryUi = '<div class="note">수유 중에는 울음이 잦아드는 경우가 많아 울음 타이머를 멈췄습니다. 계속 울면서 먹고 있다면 아래 버튼을 눌러 주세요.</div>' +
+        btn('STILL_CRYING', '계속 울면서 먹고 있어요', '', '수유 시작 시점부터 이어서 집계합니다');
+    } else if (S.cryType) {
+      cryUi = '<div class="note">울음 타이머가 계속 집계되고 있습니다.</div>';
+    }
     return '<div class="stage-label">추가 수유</div><h1>수유하세요</h1>' + via +
-      '<p class="guide">조명은 낮게, 자극 없이 조용히 수유하세요.</p>' +
+      '<p class="guide">조명은 낮게, 자극 없이 조용히 수유하세요.</p>' + cryUi +
       btn('DONE', '수유 끝 — 짧은 트림으로', 'btn-primary', '수유 종료 시각이 갱신됩니다') +
       refsHtml(['kidsHealthCry', 'medlineCry']);
   },
