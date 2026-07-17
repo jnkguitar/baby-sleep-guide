@@ -21,8 +21,9 @@
 - **세션 복구**: 모든 상태 전이를 localStorage에 저장. 새로고침·브라우저 종료
   후에도 타이머 값까지 복구
 - **근거 각주**: 모든 가이드 화면 하단에 의학 자료·전문가 가이드 출처 표기
-  (NHS, Seattle Children's, KidsHealth, MedlinePlus, Harvey Karp,
-  Kaiser Permanente, 똑게육아)
+  (NHS 영국 국민보건서비스, Seattle Children's 미국 시애틀 아동병원,
+  KidsHealth, MedlinePlus 미국 국립의학도서관, Harvey Karp 미국 소아과
+  전문의, Kaiser Permanente, 똑게육아)
 - **전역 안전 버튼**: 어느 화면에서든 [위험신호 확인]과 [부모 한계] 접근 가능.
   의식 없음·무호흡·청색증 시 119 안내 최우선 표시
 
