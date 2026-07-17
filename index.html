@@ -67,18 +67,19 @@
   }
   #nonstopWarn.visible { display: block; }
   #wakelockBtn {
-    margin-top: 6px; width: 100%;
+    flex: 1;
     background: none; border: 1px dashed var(--line); border-radius: 8px;
-    color: var(--text-faint); font-size: 12px; padding: 5px; cursor: pointer;
+    color: var(--text-faint); font-family: inherit; font-size: 12px; padding: 5px 10px; cursor: pointer;
     display: none;
   }
   #wakelockBtn.supported { display: block; }
   #wakelockBtn.on { border-color: var(--accent-dim); color: var(--accent); border-style: solid; }
-  .topbar-head { display: flex; justify-content: flex-start; margin-bottom: 6px; }
+  .topbar-head { display: flex; gap: 6px; margin-bottom: 6px; }
   #btnRestart {
+    flex: 1;
     background: none; border: 1px solid var(--line); border-radius: 8px;
     color: var(--text-faint); font-family: inherit; font-size: 12px;
-    padding: 4px 10px; cursor: pointer;
+    padding: 5px 10px; cursor: pointer;
   }
   /* ---- screen ---- */
   #screen { flex: 1; padding: 18px 18px 130px; }
@@ -189,6 +190,7 @@
   <div id="topbar">
     <div class="topbar-head">
       <button id="btnRestart" type="button">⟲ 처음부터</button>
+      <button id="wakelockBtn" type="button">화면 켜두기: 꺼짐</button>
     </div>
     <div class="timers">
       <div class="timerbox" id="tbFeed"><div class="tlabel">마지막 수유 후</div><div class="tval" id="tvFeed">—</div></div>
@@ -196,7 +198,6 @@
       <div class="timerbox" id="tbNonstop"><div class="tlabel">연속 울음</div><div class="tval" id="tvNonstop">—</div></div>
     </div>
     <div id="nonstopWarn">연속 울음 90분 경과 — 2시간 병원 기준에 접근하고 있습니다. 그치지 않는 울음이 2시간을 넘으면 진료가 필요합니다.</div>
-    <button id="wakelockBtn" type="button">화면 켜두기: 꺼짐</button>
   </div>
   <div id="screen"></div>
   <div id="bottombar">
