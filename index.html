@@ -74,6 +74,12 @@
   }
   #wakelockBtn.supported { display: block; }
   #wakelockBtn.on { border-color: var(--accent-dim); color: var(--accent); border-style: solid; }
+  .topbar-head { display: flex; justify-content: flex-start; margin-bottom: 6px; }
+  #btnRestart {
+    background: none; border: 1px solid var(--line); border-radius: 8px;
+    color: var(--text-faint); font-family: inherit; font-size: 12px;
+    padding: 4px 10px; cursor: pointer;
+  }
   /* ---- screen ---- */
   #screen { flex: 1; padding: 18px 18px 130px; }
   .stage-label { font-size: 12.5px; color: var(--accent); letter-spacing: 0.5px; margin-bottom: 6px; }
@@ -181,6 +187,9 @@
 <body>
 <div id="app">
   <div id="topbar">
+    <div class="topbar-head">
+      <button id="btnRestart" type="button">⟲ 처음부터</button>
+    </div>
     <div class="timers">
       <div class="timerbox" id="tbFeed"><div class="tlabel">마지막 수유 후</div><div class="tval" id="tvFeed">—</div></div>
       <div class="timerbox" id="tbHard"><div class="tlabel">누적 강성울음</div><div class="tval" id="tvHard">0:00</div></div>
@@ -303,12 +312,13 @@ const PREP_STEPS = ['bath', 'dress', 'move', 'feed', 'burp'];
  * target이 함수면 컨텍스트를 보고 동적으로 결정 (choice 의사상태)
  * ========================================================= */
 const MACHINE = {
+  /* 준비 단계 BACK: 실수로 완료를 누른 경우 복구 (2026-07-17 사용자 결정 — 눕히기 이후에는 없음) */
   bath:    { on: { NEXT: { target: 'dress' } } },
-  dress:   { on: { NEXT: { target: 'move' } } },
-  move:    { on: { NEXT: { target: 'feed' } } },
-  feed:    { on: { NEXT: { target: 'burp', action: 'feedEnd' } } },
+  dress:   { on: { NEXT: { target: 'move' }, BACK: { target: 'bath' } } },
+  move:    { on: { NEXT: { target: 'feed' }, BACK: { target: 'dress' } } },
+  feed:    { on: { NEXT: { target: 'burp', action: 'feedEnd' }, BACK: { target: 'move' } } },
   burp: {
-    on: { DONE: { target: 'settling' } },
+    on: { DONE: { target: 'settling' }, BACK: { target: 'feed' } },
     auto: [{ cond: (s, now) => now - s.stateSince >= burpDuration(s), target: 'settling' }],
   },
   settling: {
@@ -682,17 +692,20 @@ const SCREENS = {
   dress() {
     return prepDots('dress') + '<div class="stage-label">준비 2 / 5</div><h1>기저귀·수면복</h1>' +
       '<p class="guide">새 기저귀로 갈고 수면복(또는 스와들)을 입히세요.</p>' +
-      btn('NEXT', '입히기 완료', 'btn-primary') + cryWidget('크게 울면서 입히는 중이에요') + refsHtml(['ttokgeRoutine']);
+      btn('NEXT', '입히기 완료', 'btn-primary') + cryWidget('크게 울면서 입히는 중이에요') +
+      btn('BACK', '이전 단계로 (목욕)', 'btn-quiet') + refsHtml(['ttokgeRoutine']);
   },
   move() {
     return prepDots('move') + '<div class="stage-label">준비 3 / 5</div><h1>수면 공간으로 이동</h1>' +
       '<p class="guide">조명을 낮춘 어두운 수면 공간으로 이동하세요. 지금부터는 <strong>조용하고 지루하게</strong> 진행합니다. 말 걸기·눈 맞춤을 줄이세요.</p>' +
-      btn('NEXT', '이동 완료', 'btn-primary') + cryWidget('크게 울면서 이동 중이에요') + refsHtml(['ttokgeRoutine']);
+      btn('NEXT', '이동 완료', 'btn-primary') + cryWidget('크게 울면서 이동 중이에요') +
+      btn('BACK', '이전 단계로 (기저귀·수면복)', 'btn-quiet') + refsHtml(['ttokgeRoutine']);
   },
   feed() {
     return prepDots('feed') + '<div class="stage-label">준비 4 / 5</div><h1>마지막 수유</h1>' +
       '<p class="guide">조용히 마지막 수유를 하세요. 자극 없이, 어둡게.</p>' +
-      btn('NEXT', '수유 끝', 'btn-primary', '수유 종료 시각이 기록됩니다') + cryWidget('크게 울면서 먹고 있어요') + refsHtml(['ttokgeRoutine']);
+      btn('NEXT', '수유 끝', 'btn-primary', '수유 종료 시각이 기록됩니다') + cryWidget('크게 울면서 먹고 있어요') +
+      btn('BACK', '이전 단계로 (이동)', 'btn-quiet') + refsHtml(['ttokgeRoutine']);
   },
   burp(now) {
     const dur = burpDuration(S);
@@ -703,6 +716,7 @@ const SCREENS = {
       btn('TOGGLE_SPITTY', S.spitty ? '게워냄이 잦은 아기: 켜짐 (20분)' : '게워냄이 잦은 아기: 꺼짐 (10분)', 'btn-quiet') +
       btn('DONE', '트림 완료 — 눕히러 가기', 'btn-primary') +
       cryWidget('크게 울면서 트림 중이에요') +
+      btn('BACK', '이전 단계로 (수유)', 'btn-quiet', '다시 수유하면 종료 시각이 새로 기록됩니다') +
       refsHtml(['nhsReflux']);
   },
   settling() {
@@ -1031,6 +1045,7 @@ document.addEventListener('click', (e) => {
   if (ev === 'OVERLAY_CLOSE') { closeOverlay(); return; }
   if (ev === 'OVERLAY_FLAG') { globalEmergency(payload); return; }
   if (ev === 'OVERLAY_LIMIT_GO') { globalParentLimit(); return; }
+  if (ev === 'OVERLAY_RESTART_GO') { clearSaved(); S = null; uiMode = 'start'; closeOverlay(); render(); return; }
   // 상태머신 이벤트
   dispatch(ev, payload);
 });
@@ -1060,9 +1075,17 @@ function openLimitOverlay() {
     refsHtml(['kaiserHandoff']);
   $overlay.classList.add('visible');
 }
+function openRestartOverlay() { // 오터치 방지: 즉시 리셋하지 않고 반드시 확인을 거친다
+  $overlayPanel.innerHTML = '<h1>처음부터 시작할까요?</h1>' +
+    '<p class="guide">진행 중인 세션 기록(타이머·울음 집계·발견한 원인)이 <strong>모두 삭제</strong>됩니다.</p>' +
+    btn('OVERLAY_RESTART_GO', '처음부터 시작 — 기록 삭제', 'btn-primary') +
+    btn('OVERLAY_CLOSE', '취소', 'btn-quiet');
+  $overlay.classList.add('visible');
+}
 function closeOverlay() { $overlay.classList.remove('visible'); $overlayPanel.innerHTML = ''; }
 document.getElementById('btnRedflag').addEventListener('click', openRedflagOverlay);
 document.getElementById('btnLimit').addEventListener('click', openLimitOverlay);
+document.getElementById('btnRestart').addEventListener('click', openRestartOverlay);
 
 /* ---------- 이탈 경고 ---------- */
 window.addEventListener('beforeunload', (e) => {
