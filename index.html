@@ -211,7 +211,7 @@ const MIN = 60 * 1000;
 const T = {
   UPRIGHT_BURP: 10 * MIN,        // 수유 후 세워 안기 (기본)
   UPRIGHT_BURP_SPITTY: 20 * MIN, // 게워냄이 잦은 아기
-  QUIET_TO_ASLEEP: 10 * MIN,     // 잠듦 확정 (사용자 확정 2026-07-17)
+  SLEEP_ASK: 10 * MIN,           // 조용 상태 무액션 10분마다 잠듦 확인 질문 (2026-07-17 사용자 결정 — 자동 확정 폐지)
   FUSSING_LIMIT: 20 * MIN,       // AAP 무해 한도 15~20분 → 앱은 20분에 전환
   BURP_RETRY: 5 * MIN,           // 트림 재시도
   BURP_GATE: 30 * MIN,           // 트림 재시도 게이트: 마지막 수유 후 30분 이내만 (가스 가능성)
@@ -322,10 +322,19 @@ const MACHINE = {
   },
   quiet: {
     on: {
-      FUSSY: { target: 'fussing', action: 'crySoft' },
-      HARD:  { target: 'redflag', action: 'cryHard' },
+      ASLEEP: { target: 'asleep' },
+      FUSSY:  { target: 'fussing', action: 'crySoft' },
+      HARD:   { target: 'redflag', action: 'cryHard' },
     },
-    auto: [{ cond: (s, now) => s.quietSince && now - s.quietSince >= T.QUIET_TO_ASLEEP, target: 'asleep' }],
+    auto: [{ cond: (s, now) => s.quietSince && now - (s.sleepAskedAt || s.quietSince) >= T.SLEEP_ASK, target: 'sleepcheck' }],
+  },
+  sleepcheck: { // 무액션 10분 → 잠들었는지 질문. 잠듦은 명시적 확인으로만 확정 (2026-07-17 사용자 결정)
+    on: {
+      ASLEEP:    { target: 'asleep' },
+      NOTASLEEP: { target: 'quiet', action: 'notAsleep' },
+      FUSSY:     { target: 'fussing', action: 'crySoft' },
+      HARD:      { target: 'redflag', action: 'cryHard' },
+    },
   },
   fussing: {
     on: {
@@ -437,6 +446,7 @@ function newSession(startState, lastFeedEndAt, now) {
     ladderPrompt: false,         // L4 완료(약 8분) 원인 재체크 프롬프트
     ladderPromptShown: false,    // 세션당 한 번만
     quietSince: null,
+    sleepAskedAt: null,          // 마지막 잠듦 확인 질문 시각 — 조용 유지 시간과 별개로 10분 주기 재질문
     hiccupNote: false,
     settledVia: null,            // settling 진입 경로 (안내 배너용)
     fixingCause: null,
@@ -495,7 +505,8 @@ const ACTIONS = {
   },
   feedEndAndCalm(s, now) { s.lastFeedEndAt = now; setCry(s, null, now); },
   l7Fail(s, now) { s.lastFeedEndAt = now; s.ladderStep = 1; s.ladderPrompt = false; }, // LimitGate → Settling: ladderStep=1
-  calm(s, now) { setCry(s, null, now); s.quietSince = now; },
+  calm(s, now) { setCry(s, null, now); s.quietSince = now; s.sleepAskedAt = null; },
+  notAsleep(s, now) { s.sleepAskedAt = now; }, // 질문 주기만 리셋 — 조용 유지 시간(quietSince)은 누적 유지
   crySoft(s, now) { setCry(s, 'fussy', now); s.quietSince = null; },
   cryHard(s, now) { setCry(s, 'hard', now); s.quietSince = null; },
   hiccup(s, now) { setCry(s, null, now); s.hiccupNote = true; },
@@ -525,7 +536,7 @@ const ACTIONS = {
   },
   enterAsleep(s, now) {
     setCry(s, null, now);
-    s.stats.asleepAt = s.quietSince ? s.quietSince + T.QUIET_TO_ASLEEP : now;
+    s.stats.asleepAt = s.quietSince || now; // 조용해지기 시작한 시각으로 소급 (2026-07-17 사용자 결정)
     s.hardCryAccumBase = 0; // 잠듦 확정 시 누적 강성울음 리셋 (사용자 확정)
     s.hardCrySince = null;
     s.ended = true;
@@ -710,8 +721,20 @@ const SCREENS = {
   quiet(now) {
     const el = now - (S.quietSince || now);
     return '<div class="stage-label">관찰</div><h1>조용함 — 지켜보기</h1>' +
-      '<p class="guide">개입하지 않고 지켜보세요. 조용한 상태가 <strong>10분</strong> 유지되면 잠듦으로 확정합니다.</p>' +
-      '<div class="bigtimer"><span data-timer="quiet">' + fmtClock(el) + '</span><span class="sub">조용 유지 시간 / 10:00</span></div>' +
+      '<p class="guide">개입하지 않고 지켜보세요. 잠든 것이 확실하면 <strong>[잠들었음]</strong>을 눌러 주세요. 10분간 액션이 없으면 잠들었는지 여쭤봅니다.</p>' +
+      '<div class="bigtimer"><span data-timer="quiet">' + fmtClock(el) + '</span><span class="sub">조용 유지 시간</span></div>' +
+      btn('ASLEEP', '잠들었음', 'btn-calm') +
+      btn('FUSSY', '칭얼거리기 시작', '') +
+      btn('HARD', '강성울음 시작', 'btn-hard') +
+      refsHtml(['seattleReflux', 'ttokgeDrowsy']);
+  },
+  sleepcheck(now) {
+    const el = now - (S.quietSince || now);
+    return '<div class="stage-label">잠듦 확인</div><h1>아기가 잠들었나요?</h1>' +
+      '<p class="guide">조용한 상태로 10분간 액션이 없었습니다. 아기를 살펴보고 선택해 주세요.</p>' +
+      '<div class="bigtimer"><span data-timer="quiet">' + fmtClock(el) + '</span><span class="sub">조용 유지 시간</span></div>' +
+      btn('ASLEEP', '잠들었음', 'btn-calm') +
+      btn('NOTASLEEP', '잠들지 않았음 — 계속 지켜보기', '') +
       btn('FUSSY', '칭얼거리기 시작', '') +
       btn('HARD', '강성울음 시작', 'btn-hard') +
       refsHtml(['seattleReflux', 'ttokgeDrowsy']);
