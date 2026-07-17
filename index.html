@@ -214,6 +214,7 @@ const T = {
   QUIET_TO_ASLEEP: 10 * MIN,     // 잠듦 확정 (사용자 확정 2026-07-17)
   FUSSING_LIMIT: 20 * MIN,       // AAP 무해 한도 15~20분 → 앱은 20분에 전환
   BURP_RETRY: 5 * MIN,           // 트림 재시도
+  BURP_GATE: 30 * MIN,           // 트림 재시도 게이트: 마지막 수유 후 30분 이내만 (가스 가능성)
   REFEED_BURP: 5 * MIN,          // 추가 수유 후 짧은 트림
   REFEED_GATE: 90 * MIN,         // 재수유 게이트: 마지막 수유 후 90분+
   LADDER_STEP: 2 * MIN,          // 진정계단 칸당 2분 (Karp)
@@ -342,7 +343,7 @@ const MACHINE = {
   causecheck: {
     on: {
       FOUND:    { target: 'fixing', action: 'setCause' },
-      NOTFOUND: { target: (s) => s.burpRetryUsed ? resolveHungerGate(s) : 'burpretry' },
+      NOTFOUND: { target: (s) => resolveBurpGate(s) },
     },
   },
   fixing: { on: { FIXED: { target: 'settling' } } },
@@ -394,6 +395,15 @@ for (const name of ['bath', 'dress', 'move', 'feed', 'burp', 'burpretry', 'fixin
   MACHINE[name].on.CRY_STOPPED = { action: 'calm' };
 }
 
+/* choice 의사상태: BurpGate — 마지막 수유 30분 이내일 때만 트림 재시도 (2026-07-17 사용자 결정)
+ * 30분이 지났으면 가스 가능성이 낮아 배고픔 확인으로 건너뛴다.
+ * 수유 시각을 모르면 가스를 배제할 수 없으므로 트림 재시도를 유지한다. */
+function burpRetryEligible(s, now) {
+  return !s.burpRetryUsed && (!s.lastFeedEndAt || now - s.lastFeedEndAt <= T.BURP_GATE);
+}
+function resolveBurpGate(s) {
+  return burpRetryEligible(s, Date.now()) ? 'burpretry' : resolveHungerGate(s);
+}
 /* choice 의사상태: HungerGate — 마지막 수유 90분+ 이면 자동으로 재수유 */
 function resolveHungerGate(s) {
   if (s.lastFeedEndAt && Date.now() - s.lastFeedEndAt >= T.REFEED_GATE) return 'refeed';
@@ -729,14 +739,15 @@ const SCREENS = {
       btn('NONE', '해당 없음 — 원인 체크로', 'btn-primary') +
       refsHtml(['seattleCrying', 'seattleEmerg']);
   },
-  causecheck() {
+  causecheck(now) {
     let list = '';
     CAUSES.forEach((c, i) => {
       list += '<li><div class="group-name">' + (i + 1) + '. ' + esc(c.label) + '</div>' +
         '<div class="item-check">' + esc(c.check) + '</div>' +
         '<button type="button" class="item-btn cause" data-event="FOUND" data-payload="' + c.id + '">이게 원인 — ' + esc(c.label) + '</button></li>';
     });
-    const nextHint = S.burpRetryUsed ? '배고픔 확인으로' : '트림 재시도로';
+    const nextTarget = burpRetryEligible(S, now) ? 'burpretry' : resolveHungerGate(S);
+    const nextHint = { burpretry: '트림 재시도로', hungergate: '배고픔 확인으로', refeed: '추가 수유로' }[nextTarget];
     return '<div class="stage-label">원인 체크 (약 2분)</div><h1>순서대로 빠르게 확인</h1>' +
       '<ul class="checklist">' + list + '</ul>' +
       btn('NOTFOUND', '원인 못 찾음 — ' + nextHint, '') +
