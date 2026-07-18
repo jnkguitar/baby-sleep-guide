@@ -1,4 +1,4 @@
-# 상태머신 (State Machine) — v1.3
+# 상태머신 (State Machine) — v1.4
 
 `index.html`의 `MACHINE` 정의를 그대로 옮긴 상태 다이어그램이다. 화면(UI)은
 이 상태머신을 렌더링한 결과이며, 상태 id는 코드의 상태 이름과 동일하다.
@@ -11,18 +11,19 @@
 | --- | --- | --- |
 | `UPRIGHT_BURP` / `UPRIGHT_BURP_SPITTY` | 10분 / 20분 | 준비 5단계 트림 (게워냄이 잦은 아기 20분) |
 | `SLEEP_ASK` | 10분 | 조용 상태 무액션 시 잠듦 확인 질문 주기 |
-| `FUSSING_LIMIT` | 20분 | 칭얼거림 무해 한도 → 원인 체크 전환 |
+| `FUSSING_LIMIT` | 10분 | 칭얼거림 관찰 한도 → 원인 체크 전환 (대한소아청소년과학회 '10~20분 정상 범위'의 하한) |
 | `BURP_RETRY` | 5분 | 트림 재시도 |
 | `BURP_GATE` | 30분 | 트림 재시도 진입 게이트 (마지막 수유 후) |
 | `REFEED_BURP` | 5분 | 추가 수유 후 짧은 트림 |
-| `REFEED_GATE` | 90분 | 재수유 자동 진입 게이트 (마지막 수유 후) |
-| `LADDER_STEP` | 2분 | 진정계단 칸당 권장 관찰 시간 |
+| `REFEED_GATE` | 90분 | '배고픔 가능성 높음' 힌트 기준 (게이트 아님 — 신호가 있으면 언제든 수유) |
+| `LADDER_STEP` | 1분 | 진정계단 다음 칸 힌트 (1~2분 관찰 — 기관 권고 '기법당 수 분'의 하한, 격한 울음 시 즉시 격상) |
 | `HARD_CRY_LIMIT` | 30분 | 누적 강성울음 교대 기준 |
 | `NONSTOP_WARN` / `NONSTOP_EMERGENCY` | 90분 / 120분 | 연속 울음 경고 / 응급 병원 기준 |
+| `NONSTOP_GRACE` | 5분 | 연속 울음 소강 유예 — 5분 미만의 잠잠은 같은 에피소드 |
 
 ## 다이어그램
 
-- `<<choice>>`: 컨텍스트로 목표 상태를 결정하는 의사상태 (코드의 `resolve*` 함수)
+- `<<choice>>`: 컨텍스트로 목표 상태를 결정하는 의사상태 (코드의 `resolve*`/게이트 함수)
 - 점선(`-->`에 조건 라벨): `auto` 자동 전이 (타이머 경과 시 자동 전환)
 - 실선: `on` 이벤트 전이 (부모의 버튼 입력)
 
@@ -38,10 +39,9 @@ stateDiagram-v2
     state "잠듦 확인" as sleepcheck
     state "칭얼거림 — 무개입 관찰" as fussing
     state "위험신호 확인" as redflag
-    state "원인 체크" as causecheck
+    state "원인 체크 (배고픔이 1번)" as causecheck
     state "원인 해결" as fixing
     state "트림 재시도" as burpretry
-    state "배고픔 확인" as hungergate
     state "추가 수유" as refeed
     state "추가 수유 후 트림" as refeedburp
     state "진정계단 (7칸)" as ladder
@@ -49,7 +49,6 @@ stateDiagram-v2
     state "잠듦 (완료)" as asleep
     state "응급 (병원)" as emergency
     state burp_gate <<choice>>
-    state hunger_gate <<choice>>
     state limit_gate <<choice>>
 
     [*] --> bath: 처음부터 시작
@@ -83,25 +82,21 @@ stateDiagram-v2
 
     fussing --> quiet: QUIET
     fussing --> redflag: HARD
-    fussing --> causecheck: auto · 20분 경과
+    fussing --> causecheck: auto · 10분 경과
 
     redflag --> emergency: FLAG
     redflag --> causecheck: NONE
 
+    causecheck --> refeed: HUNGRY (배고픔 신호)
     causecheck --> fixing: FOUND
     causecheck --> burp_gate: NOTFOUND
     burp_gate --> burpretry: 수유 30분 이내 & 미사용
-    burp_gate --> hunger_gate: 그 외
+    burp_gate --> ladder: 그 외
 
     fixing --> settling: FIXED
 
     burpretry --> settling: DONE
     burpretry --> settling: auto · 5분 경과
-
-    hunger_gate --> refeed: 마지막 수유 90분+
-    hunger_gate --> hungergate: 90분 미만
-    hungergate --> refeed: HUNGRY
-    hungergate --> ladder: NOTHUNGRY
 
     refeed --> refeedburp: DONE / refeedEnd
     refeed --> refeed: STILL_CRYING
@@ -109,6 +104,7 @@ stateDiagram-v2
     refeedburp --> settling: auto · 5분 경과
 
     ladder --> settling: CALMED
+    ladder --> refeed: HUNGRY (배고픔 신호 — 어느 칸에서든)
     ladder --> ladder: NEXTSTEP (최대 7칸)
     ladder --> causecheck: RECHECK (4칸 완료)
     ladder --> settling: L7_FED_CALM
@@ -117,7 +113,6 @@ stateDiagram-v2
     limit_gate --> settling: 그 외
 
     handoff --> settling: RESUME
-    handoff --> emergency: auto · 연속 울음 2시간
 
     asleep --> [*]
     emergency --> [*]
@@ -125,9 +120,12 @@ stateDiagram-v2
 
 ## 전역 전이 (모든 활성 상태 공통)
 
-상단·하단 바 버튼으로 어느 상태에서든 발생한다 (위 다이어그램에는 생략).
-
-- **[위험신호 확인]** → `redflag` 오버레이 → 위험신호 선택 시 `emergency`
+- **연속 울음 2시간** → `emergency` 자동 전이. 어느 상태에서든 발동하되,
+  실제로 우는 중일 때만 (소강 중에는 재개하는 순간 즉시 발동). 5분 미만의
+  소강은 연속 울음을 리셋하지 않는다 (`NONSTOP_GRACE`).
+- **[위험신호 확인]** → `redflag` 오버레이 → 위험신호 선택 시 `emergency`.
+  체온은 촉진(만져보기) 1차 → 해당 시에만 측정 2차 (발열 38.0°C↑ 해열제 금지
+  경고 / 저체온 36.0°C↓ 재가온 후 재측정).
 - **[부모 한계]** → 안전히 눕힘 확인 → `handoff`
 - **[⟲ 처음부터]** → 확인 후 세션 삭제, 시작 화면으로
 
@@ -139,12 +137,11 @@ stateDiagram-v2
 - `CRY_HARD_START` → 강성울음 집계 시작
 - `CRY_STOPPED` → 집계 종료
 
-## choice 의사상태 (코드 `resolve*` 1:1)
+## choice 의사상태 (코드 1:1)
 
-- **BurpGate** (`resolveBurpGate`): `!burpRetryUsed && (수유 시각 미상 || 마지막
-  수유 후 30분 이내)`이면 `burpretry`, 아니면 HungerGate로.
-- **HungerGate** (`resolveHungerGate`): 마지막 수유 후 90분 이상이면 `refeed`
-  직행, 아니면 `hungergate`.
+- **BurpGate** (`burpRetryEligible`): `!burpRetryUsed && (수유 시각 미상 || 마지막
+  수유 후 30분 이내)`이면 `burpretry`, 아니면 `ladder`. (배고픔은 원인 체크
+  1번에서 이미 확인 — 배고픔 게이트는 v1.4에서 폐지)
 - **LimitGate** (`resolveLimitGate`): 누적 강성울음 30분 이상이면 `handoff`,
   아니면 `settling`.
 

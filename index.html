@@ -237,7 +237,7 @@ const T = {
   BURP_GATE: 30 * MIN,           // 트림 재시도 게이트: 마지막 수유 후 30분 이내만 (가스 가능성)
   REFEED_BURP: 5 * MIN,          // 추가 수유 후 짧은 트림
   REFEED_GATE: 90 * MIN,         // 90분 경과 시 '배고픔 가능성 높음' 힌트 (게이트 아님 — 신호가 있으면 언제든 수유)
-  LADDER_STEP: 2 * MIN,          // 진정계단 칸당 2분 (Karp)
+  LADDER_STEP: 1 * MIN,          // 진정계단 다음 칸 힌트 — 1~2분 관찰 (기관 권고 '기법당 수 분'의 하한, 격한 울음 시 즉시 격상)
   HARD_CRY_LIMIT: 30 * MIN,      // 부모 교대 기준: 누적 강성울음 30분
   NONSTOP_WARN: 90 * MIN,        // 연속 울음 90분 경고
   NONSTOP_EMERGENCY: 120 * MIN,  // 병원 기준: 연속 울음 2시간 (Seattle Children's)
@@ -270,6 +270,9 @@ const REFS = {
   karp5S:         { org: 'Harvey Karp(하비 카프, 미국 소아과 전문의) "The 5 S\'s for Soothing Babies"', summary: '기법당 1~2분 관찰, 8~10분 무반응 시 재평가', url: 'https://www.happiestbaby.com/blogs/baby/the-5-s-s-for-soothing-babies' },
   kaiserHandoff:  { org: 'Kaiser Permanente(미국 의료기관 카이저 퍼머넌트) "Crying Baby: Care Instructions"', summary: '한계 시 아기를 안전히 눕히고 자리 뜨기, 절대 흔들지 않기', url: 'https://healthy.kaiserpermanente.org/health-wellness/health-encyclopedia/he.crying-baby-care-instructions.uh4469' },
   purpleCrying:   { org: 'Period of PURPLE Crying(미국 흔들린아이증후군 예방센터)', summary: '생후 2주~약 2개월 정점의 울음 증가는 정상 발달 과정', url: 'https://dontshake.org/purple-crying' },
+  karitane:       { org: 'Karitane(호주 NSW 정부 지원 조기양육기관) "Newborn Sleep Guide"', summary: '0~6주는 안아 재워도 되는 시기 — 6~12주부터 졸리지만 깨어 있게 눕히기 시도', url: 'https://karitane.com.au/newborn/infant-sleep/' },
+  mindellRoutine: { org: 'Mindell et al. 2015, SLEEP(미국수면학회지)', summary: '일관된 수면의식은 0개월부터 수면 개선과 연관 — 꾸준할수록, 빠를수록 좋음', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC4402657/' },
+  rchSettling:    { org: 'Royal Children\'s Hospital Melbourne(호주 왕립아동병원) "Managing Unsettled Babies"', summary: '한 가지 조합을 수 분간 유지 — 한꺼번에 여러 자극은 과자극 위험', url: 'https://www.rch.org.au/uploadedFiles/Main/Content/hsru/Parent_Managing%20Unsettled%20Babies_public.pdf' },
 };
 
 const DISCLAIMER = '이 앱은 의료 조언이 아니며 보호자의 판단을 대체하지 않습니다. 응급 상황에서는 즉시 119에 연락하세요.';
@@ -469,7 +472,7 @@ function newSession(startState, lastFeedEndAt, now) {
     nonstopQuietAt: null,        // 연속 울음 중 소강 시작 시각 (5분 유예 판정용)
     cryType: null,               // null | 'fussy' | 'hard'
     ladderStep: 1,               // 재진입 시 항상 1로 리셋
-    ladderPrompt: false,         // L4 완료(약 8분) 원인 재체크 프롬프트
+    ladderPrompt: false,         // L4 완료 시점 원인 재체크 프롬프트
     ladderPromptShown: false,    // 세션당 한 번만
     quietSince: null,
     sleepAskedAt: null,          // 마지막 잠듦 확인 질문 시각 — 조용 유지 시간과 별개로 10분 주기 재질문
@@ -543,7 +546,7 @@ const ACTIONS = {
     if (s.ladderStep < 7) {
       s.ladderStep += 1;
       s.stateSince = now; // 칸당 2분 타이머 재시작
-      if (s.ladderStep === 5 && !s.ladderPromptShown) { // L4 완료 = 약 8분 시점
+      if (s.ladderStep === 5 && !s.ladderPromptShown) { // L4 완료 시점
         s.ladderPrompt = true;
         s.ladderPromptShown = true;
       }
@@ -886,7 +889,7 @@ const SCREENS = {
     const ready = el >= T.LADDER_STEP;
     let prompt = '';
     if (S.ladderPrompt) {
-      prompt = '<div class="note">8분 이상 무반응입니다. 놓친 원인이 없는지 다시 확인해 보세요.</div>' +
+      prompt = '<div class="note">여러 칸을 지나도 반응이 없습니다. 놓친 원인이 없는지 다시 확인해 보세요.</div>' +
         btn('RECHECK', '원인 다시 확인하기', '') +
         btn('STAY', '아니요, 계단 계속 진행', 'btn-quiet');
     }
@@ -895,7 +898,7 @@ const SCREENS = {
     let actions;
     if (S.ladderStep < 7) {
       actions = btn('CALMED', '진정됨 — 다시 눕히기', 'btn-calm') +
-        btn('NEXTSTEP', '다음 칸: ' + LADDER[S.ladderStep].title, ready ? 'btn-pulse' : '', '2분간 반응이 없을 때 넘어가세요') +
+        btn('NEXTSTEP', '다음 칸: ' + LADDER[S.ladderStep].title, ready ? 'btn-pulse' : '', '1~2분 반응이 없거나, 울음이 격해지면 바로 넘어가세요') +
         btn('HUNGRY', '배고픔 신호가 보여요 — 수유하기', 'btn-quiet', '루팅·손 빨기·입 오물거림이 보이면 계단과 무관하게 수유');
     } else {
       actions = btn('L7_FED_CALM', '수유로 진정됨 — 다시 눕히기', 'btn-calm', '수유 종료 시각이 갱신됩니다') +
@@ -903,11 +906,11 @@ const SCREENS = {
     }
     const refKeys = S.ladderStep === 7
       ? ['unicefFeeding', 'tresillian', 'ttokgeLadder']
-      : ['tresillian', 'rcnSettling', 'aapSelfSoothe', 'ttokgeLadder'];
+      : ['tresillian', 'aapSelfSoothe', 'rchSettling', 'ttokgeLadder'];
     return '<div class="stage-label">진정계단 ' + S.ladderStep + ' / 7</div>' + dots +
       '<h1>' + esc(step.title) + '</h1>' +
       '<p class="guide">' + esc(step.desc) + '</p>' +
-      '<div class="bigtimer"><span data-timer="ladder">' + fmtClock(el) + '</span><span class="sub">이 칸 경과 — 칸당 2분 반응 관찰</span></div>' +
+      '<div class="bigtimer"><span data-timer="ladder">' + fmtClock(el) + '</span><span class="sub">이 칸 경과 — 1~2분 반응을 관찰하세요</span></div>' +
       prompt + actions +
       refsHtml(refKeys);
   },
@@ -963,7 +966,7 @@ const SCREENS = {
 
 /* ---------- 세션 외 화면: 시작 / 이어하기 / 수유 시각 입력 ---------- */
 function biblioHtml() {
-  const linked = ['kpsSleep', 'nhsReflux', 'seattleReflux', 'seattleCrying', 'seattleEmerg', 'seattleNewborn', 'nhsFever', 'niceConcern', 'kidsHealthCry', 'kidsHealthNbSleep', 'medlineCry', 'aapHernia', 'aapSelfSoothe', 'aapBathing', 'nhsWashing', 'tresillian', 'rcnSettling', 'unicefFeeding', 'karp5S', 'kaiserHandoff', 'purpleCrying'];
+  const linked = ['kpsSleep', 'mindellRoutine', 'karitane', 'nhsReflux', 'seattleReflux', 'seattleCrying', 'seattleEmerg', 'seattleNewborn', 'nhsFever', 'niceConcern', 'kidsHealthCry', 'kidsHealthNbSleep', 'medlineCry', 'aapHernia', 'aapSelfSoothe', 'aapBathing', 'nhsWashing', 'tresillian', 'rcnSettling', 'rchSettling', 'unicefFeeding', 'karp5S', 'kaiserHandoff', 'purpleCrying'];
   let items = '<li>똑게육아 (책) — 수면의식 루틴, 진정계단</li>';
   for (const k of linked) {
     const r = REFS[k];
@@ -974,7 +977,8 @@ function biblioHtml() {
 function renderStart() {
   $screen.innerHTML =
     '<div class="brand"><div class="name">잠잠<span class="by">by johnny</span></div><div class="desc">아기 수면의식 가이드 — 지금 할 일 하나만</div></div>' +
-    '<p class="guide" style="font-size:14px;color:var(--text-dim);text-align:center;margin-bottom:22px">생후 4~12주 아기를 위한 실시간 재우기 가이드입니다.<br>버튼만 누르면 다음 한 걸음을 안내합니다.</p>' +
+    '<p class="guide" style="font-size:14px;color:var(--text-dim);text-align:center;margin-bottom:10px">생후 12주(3개월) 이하 아기를 위한 실시간 재우기 가이드입니다.<br>버튼만 누르면 다음 한 걸음을 안내합니다.</p>' +
+    '<p class="guide" style="font-size:12.5px;color:var(--text-faint);text-align:center;margin-bottom:22px">수면의식은 언제 시작해도 좋습니다. 밤낮 리듬이 생기는 생후 6주 무렵부터 효과를 체감하기 쉽고,<br>그 전에는 안아 재워도 괜찮습니다.</p>' +
     btn('START_FULL', '처음부터 시작', 'btn-primary', '목욕 → 기저귀 → 이동 → 수유 → 트림 → 눕히기') +
     btn('START_SETTLE', '바로 눕히기부터', '', '이미 수유를 마쳤거나 밤중에 깬 경우') +
     '<p class="disclaimer" style="text-align:center;margin-top:26px">' + esc(DISCLAIMER) + '</p>' +
