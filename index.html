@@ -126,6 +126,11 @@
     font-family: inherit; padding: 8px 10px; margin-top: 6px; cursor: pointer; text-align: left;
   }
   .item-btn.cause { border-color: var(--accent-dim); background: var(--accent-bg); color: var(--accent); }
+  .checklist details { margin-top: 4px; }
+  .checklist summary {
+    cursor: pointer; font-size: 14.5px; font-weight: 600; color: var(--accent);
+    padding: 10px 0 4px; list-style-position: inside;
+  }
   .stepdots { display: flex; gap: 5px; margin-bottom: 14px; }
   .stepdots span { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
   .stepdots span.done { background: var(--accent-dim); }
@@ -212,22 +217,34 @@ const T = {
   UPRIGHT_BURP: 10 * MIN,        // 수유 후 세워 안기 (기본)
   UPRIGHT_BURP_SPITTY: 20 * MIN, // 게워냄이 잦은 아기
   QUIET_TO_ASLEEP: 10 * MIN,     // 잠듦 확정 (사용자 확정 2026-07-17)
-  FUSSING_LIMIT: 20 * MIN,       // AAP 무해 한도 15~20분 → 앱은 20분에 전환
+  FUSSING_LIMIT: 10 * MIN,       // 칭얼거림 관찰 한도 — 대한소아청소년과학회 '10~20분 정상 범위'의 하한을 보수적으로 채택
   BURP_RETRY: 5 * MIN,           // 트림 재시도
   REFEED_BURP: 5 * MIN,          // 추가 수유 후 짧은 트림
-  REFEED_GATE: 90 * MIN,         // 재수유 게이트: 마지막 수유 후 90분+
+  REFEED_GATE: 90 * MIN,         // 90분 경과 시 '배고픔 가능성 높음' 힌트 (게이트 아님 — 신호가 있으면 언제든 수유)
   LADDER_STEP: 2 * MIN,          // 진정계단 칸당 2분 (Karp)
   HARD_CRY_LIMIT: 30 * MIN,      // 부모 교대 기준: 누적 강성울음 30분
   NONSTOP_WARN: 90 * MIN,        // 연속 울음 90분 경고
   NONSTOP_EMERGENCY: 120 * MIN,  // 병원 기준: 연속 울음 2시간 (Seattle Children's)
+  NONSTOP_GRACE: 5 * MIN,        // 연속 울음 소강 유예: 5분 미만의 잠잠은 같은 에피소드로 본다
 };
 
 /* ---------- 근거 출처 (매핑 외 URL 금지 · 책은 텍스트만) ---------- */
 const REFS = {
   ttokgeRoutine:  { text: '책: 똑게육아 — 일정한 수면의식 루틴' },
   ttokgeDrowsy:   { text: '책: 똑게육아 — 졸리지만 깨어 있는 상태로 눕히기' },
-  ttokgeCry:      { text: '책: 똑게육아 — AAP 인용, 잠들기 전 15~20분 울음 무해' },
   ttokgeLadder:   { text: '책: 똑게육아 p.262 — 진정계단' },
+  kpsSleep:       { org: '대한소아청소년과학회 "우리 아이 올바른 수면교육"', summary: '눕힌 뒤 10~20분 칭얼거림은 정상 — 먼저 스스로 잠들 수 있는지 지켜보기', url: 'https://www.pediatrics.or.kr/bbs/index.html?code=infantcare&category=A&gubun=E&page=1&number=8808&mode=view' },
+  nhsFever:       { org: 'NHS "High temperature (fever) in children"', summary: '등·가슴이 평소보다 뜨겁게 느껴지거나 아파 보일 때 체온 측정', url: 'https://www.nhs.uk/symptoms/fever-in-children/' },
+  seattleNewborn: { org: 'Seattle Children\'s "Newborn Illness - How to Recognize"', summary: '직장 36.0°C 미만이 보온에도 오르지 않으면 즉시 진료', url: 'https://www.seattlechildrens.org/conditions/a-z/newborn-illness---how-to-recognize/' },
+  niceConcern:    { org: 'NICE NG254 "Suspected sepsis"', summary: '"아이가 평소와 다르다"는 보호자 우려를 공식 위험 항목으로 명시', url: 'https://www.nice.org.uk/guidance/ng254/chapter/Evaluating-risk-level' },
+  aapHernia:      { org: 'AAP HealthyChildren "Inguinal Hernia"', summary: '사타구니·음낭이 부어 있으면 감돈 위험 — 즉시 진료', url: 'https://www.healthychildren.org/English/health-issues/conditions/abdominal/Pages/Inguinal-Hernia.aspx' },
+  tresillian:     { org: 'Tresillian "Responsive Settling"', summary: '눕힌 채 달래기 → 안아서 진정 → 다시 눕히기의 단계적 반응 달래기', url: 'https://www.tresillian.org.au/baby/sleep/self-settling-techniques/' },
+  rcnSettling:    { org: 'Raising Children Network "Patting & settling 0-6 months"', summary: '말·쉬 소리 → 토닥임 → 안아 진정 후 다시 눕히기 반복', url: 'https://raisingchildren.net.au/newborns/sleep/settling-routines/patting-settling' },
+  aapSelfSoothe:  { org: 'AAP HealthyChildren "Self-Soothing"', summary: '한 번에 감각 자극 1~2개 — 한 전략을 충분히 지속한 뒤 다음으로', url: 'https://www.healthychildren.org/English/ages-stages/baby/crying-colic/Pages/Self-Soothing-Helping-Your-Baby-Learn-This-Life-Skill.aspx' },
+  unicefFeeding:  { org: 'UNICEF UK Baby Friendly "Responsive Feeding"', summary: '수유는 영양뿐 아니라 위안·안심을 위한 것 — 달래기 수유는 정당한 반응', url: 'https://www.unicef.org.uk/babyfriendly/wp-content/uploads/sites/2/2017/12/Responsive-Feeding-Infosheet-Unicef-UK-Baby-Friendly-Initiative.pdf' },
+  kidsHealthNbSleep: { org: 'KidsHealth "Sleep and Your Newborn"', summary: '신생아기는 안아 달래서 재워도 됨 — 버릇 걱정 불필요', url: 'https://kidshealth.org/en/parents/sleepnewborn.html' },
+  aapBathing:     { org: 'AAP HealthyChildren "Bathing Your Baby"', summary: '첫 1년은 주 3회 목욕이면 충분 — 잦은 목욕은 피부 건조 유발', url: 'https://www.healthychildren.org/English/ages-stages/baby/bathing-skin-care/Pages/Bathing-Your-Newborn.aspx' },
+  nhsWashing:     { org: 'NHS "Washing and bathing your baby"', summary: '매일 목욕 불필요 — 얼굴·목·손·엉덩이 닦기(topping and tailing)로 대체', url: 'https://www.nhs.uk/conditions/baby/caring-for-a-newborn/washing-and-bathing-your-baby/' },
   nhsReflux:      { org: 'NHS "Reflux in babies"', summary: '역류가 잦으면 수유 후 세워 안기 연장', url: 'https://www.nhs.uk/conditions/reflux-in-babies/' },
   seattleReflux:  { org: 'Seattle Children\'s "Reflux (Spitting Up)"', summary: '평평한 침대에 등을 대고 눕히기', url: 'https://www.seattlechildrens.org/conditions/a-z/reflux-spitting-up/' },
   kidsHealthCry:  { org: 'KidsHealth "What to Do When Babies Cry"', summary: '울음 원인 확인과 대응', url: 'https://kidshealth.org/en/parents/babies-cry.html' },
@@ -236,14 +253,16 @@ const REFS = {
   medlineCry:     { org: 'MedlinePlus "Excessive crying in infants"', summary: '영아 과다 울음의 원인', url: 'https://medlineplus.gov/ency/article/003023.htm' },
   karp5S:         { org: 'Harvey Karp "The 5 S\'s for Soothing Babies"', summary: '기법당 1~2분 관찰, 8~10분 무반응 시 재평가', url: 'https://www.happiestbaby.com/blogs/baby/the-5-s-s-for-soothing-babies' },
   kaiserHandoff:  { org: 'Kaiser Permanente "Crying Baby: Care Instructions"', summary: '한계 시 아기를 안전히 눕히고 자리 뜨기, 절대 흔들지 않기', url: 'https://healthy.kaiserpermanente.org/health-wellness/health-encyclopedia/he.crying-baby-care-instructions.uh4469' },
+  purpleCrying:   { org: 'Period of PURPLE Crying (NCSBS)', summary: '생후 2주~약 2개월 정점의 울음 증가는 정상 발달 과정', url: 'https://dontshake.org/purple-crying' },
 };
 
 const DISCLAIMER = '이 앱은 의료 조언이 아니며 보호자의 판단을 대체하지 않습니다. 응급 상황에서는 즉시 119에 연락하세요.';
 
 /* ---------- 위험신호 4계열 ---------- */
 const REDFLAGS = [
-  { group: '발열', items: [
-    { id: 'fever', label: '38.0°C 이상 (3개월 미만)', critical: false },
+  { group: '체온', custom: true, items: [ // custom: 촉진 1차 → 측정 2차의 전용 렌더링 (tempGroupHtml)
+    { id: 'fever', label: '발열 — 38.0°C 이상 (3개월 미만)', critical: false },
+    { id: 'hypothermia', label: '저체온 — 36.0°C 미만, 보온 후 재측정에도 낮음', critical: false },
   ]},
   { group: '호흡', items: [
     { id: 'apnea', label: '무호흡 — 숨을 쉬지 않음', critical: true },
@@ -269,9 +288,11 @@ function findFlag(id) {
   return null;
 }
 
-/* ---------- 원인 체크 (순서 있는 체크리스트) ---------- */
+/* ---------- 원인 체크 (순서 있는 체크리스트 — 배고픔이 1번: NHS·Mayo·KidsHealth 표준 순서) ---------- */
 const CAUSES = [
-  { id: 'diaper', label: '기저귀', check: '기저귀가 젖었거나 대변을 봤는지 확인하세요.',
+  { id: 'hunger', label: '배고픔', check: '입을 벌려 젖을 찾거나(루팅), 손을 빨거나, 입을 오물거리는지 확인하세요.',
+    fix: null }, // 배고픔은 fixing이 아니라 refeed로 직행 (HUNGRY 이벤트)
+  { id: 'diaper', label: '기저귀', check: '기저귀가 젖었거나 대변을 봤는지 확인하세요. 기저귀를 연 김에 사타구니·음낭이 부어 있는지도 보세요 — 부어 있으면 즉시 진료가 필요합니다.',
     fix: '조명을 최대한 낮추고 조용히 기저귀를 갈아 주세요. 말을 걸거나 눈을 맞추지 않습니다.' },
   { id: 'temp', label: '온도·습도', check: '등·목에 땀이 찼는지, 손발이 차가운지, 방이 덥거나 건조한지 확인하세요.',
     fix: '땀이 났으면 한 겹 벗기고, 손발이 차면 한 겹 더해 주세요. 방 온습도를 조절합니다.' },
@@ -288,8 +309,8 @@ const LADDER = [
   { title: '공갈젖꼭지·애착 인형', desc: '공갈젖꼭지를 물리거나 애착 인형을 쥐여 주세요.' },
   { title: '터칭', desc: '가슴·등·엉덩이를 토닥이거나, 머리·배를 부드럽게 문질러 주세요.' },
   { title: '눕힌 채 움직이기', desc: '눕힌 상태 그대로 몸을 이리저리 부드럽게 움직여 보세요.' },
-  { title: '안아서 둥가둥가', desc: '안아 올려 부드럽게 둥가둥가 하세요. 잠들기 직전, 깨어 있는 상태로 다시 내려놓습니다.' },
-  { title: '수유 (마지막 수단)', desc: '마지막 수단으로 수유하세요. 진정되면 깨어 있는 상태로 다시 눕힙니다.' },
+  { title: '안아서 둥가둥가', desc: '안아 올려 부드럽게 둥가둥가 하세요. 잠들기 직전, 가능하면 깨어 있는 상태로 다시 내려놓습니다. 품에서 잠들어도 실패가 아닙니다.' },
+  { title: '수유 (배고픔이 아닐 때의 마지막 칸)', desc: '배고픔 신호가 없어도 위안을 위한 수유는 정당한 달래기 방법입니다. 조용히 수유하고, 진정되면 가능하면 깨어 있는 상태로 다시 눕히세요.' },
 ];
 
 const PREP_STEPS = ['bath', 'dress', 'move', 'feed', 'burp'];
@@ -339,8 +360,9 @@ const MACHINE = {
   },
   causecheck: {
     on: {
+      HUNGRY:   { target: 'refeed', action: 'setCauseHunger' },
       FOUND:    { target: 'fixing', action: 'setCause' },
-      NOTFOUND: { target: (s) => s.burpRetryUsed ? resolveHungerGate(s) : 'burpretry' },
+      NOTFOUND: { target: (s) => s.burpRetryUsed ? 'ladder' : 'burpretry', action: 'ladderReset' },
     },
   },
   fixing: { on: { FIXED: { target: 'settling' } } },
@@ -348,12 +370,6 @@ const MACHINE = {
     entry: 'markBurpRetry',
     on: { DONE: { target: 'settling' } },
     auto: [{ cond: (s, now) => now - s.stateSince >= T.BURP_RETRY, target: 'settling' }],
-  },
-  hungergate: { // 90분+ 자동 충족 시 이 상태를 거치지 않고 refeed로 직행 (resolveHungerGate)
-    on: {
-      HUNGRY:    { target: 'refeed' },
-      NOTHUNGRY: { target: 'ladder', action: 'ladderReset' },
-    },
   },
   refeed: { // 수유 중에는 울음이 잦아드는 경우가 많아 타이머를 기본 일시정지 (2026-07-17 사용자 결정)
     entry: 'pauseCryForFeed',
@@ -369,6 +385,7 @@ const MACHINE = {
   ladder: {
     on: {
       CALMED:      { target: 'settling', action: 'calm' },
+      HUNGRY:      { target: 'refeed' },                 // 배고픔 신호가 보이면 어느 칸에서든 수유로 탈출
       NEXTSTEP:    { action: 'ladderNext' },             // 자동 전환 없음 — 결정은 부모가
       RECHECK:     { target: 'causecheck', action: 'dismissLadderPrompt' },
       STAY:        { action: 'dismissLadderPrompt' },
@@ -378,8 +395,7 @@ const MACHINE = {
   },
   handoff: {
     on: { RESUME: { target: 'settling', action: 'ladderReset' } },
-    auto: [{ cond: (s, now) => s.nonstopCrySince && now - s.nonstopCrySince >= T.NONSTOP_EMERGENCY,
-             target: 'emergency', action: 'setNonstopFlag' }],
+    // 연속 울음 2시간 → 응급 전이는 전역 처리 (evalAuto) — 어느 상태에서든 발동
   },
   asleep:    { final: true, entry: 'enterAsleep' },
   emergency: { final: true },
@@ -392,11 +408,6 @@ for (const name of ['bath', 'dress', 'move', 'feed', 'burp', 'burpretry', 'fixin
   MACHINE[name].on.CRY_STOPPED = { action: 'calm' };
 }
 
-/* choice 의사상태: HungerGate — 마지막 수유 90분+ 이면 자동으로 재수유 */
-function resolveHungerGate(s) {
-  if (s.lastFeedEndAt && Date.now() - s.lastFeedEndAt >= T.REFEED_GATE) return 'refeed';
-  return 'hungergate';
-}
 /* choice 의사상태: LimitGate — 누적 강성울음 30분 이상이면 교대 */
 function resolveLimitGate(s) {
   return hardCryAccum(s, Date.now()) >= T.HARD_CRY_LIMIT ? 'handoff' : 'settling';
@@ -420,6 +431,7 @@ function newSession(startState, lastFeedEndAt, now) {
     hardCryAccumBase: 0,         // 누적 강성울음(ms) — 확정 누적분
     hardCrySince: null,          // 진행 중 강성울음 시작 시각
     nonstopCrySince: null,       // 연속 울음 시작 시각 (병원 2시간 기준) — 누적과 별개
+    nonstopQuietAt: null,        // 연속 울음 중 소강 시작 시각 (5분 유예 판정용)
     cryType: null,               // null | 'fussy' | 'hard'
     ladderStep: 1,               // 재진입 시 항상 1로 리셋
     ladderPrompt: false,         // L4 완료(약 8분) 원인 재체크 프롬프트
@@ -455,9 +467,10 @@ function setCry(s, type, now) {
   if (type) {
     segs.push({ type: type, start: now, end: null });
     if (!s.nonstopCrySince) s.nonstopCrySince = now;
+    s.nonstopQuietAt = null; // 유예 내 재개 → 연속 울음 이어서 집계
     if (type === 'hard') s.hardCrySince = now;
-  } else {
-    s.nonstopCrySince = null; // 진정·잠잠 → 연속 울음 리셋
+  } else if (s.nonstopCrySince) {
+    s.nonstopQuietAt = now; // 즉시 리셋하지 않음 — 5분 이상 잠잠해야 에피소드 종료 (evalAuto에서 확정)
   }
   s.cryType = type;
 }
@@ -500,6 +513,7 @@ const ACTIONS = {
     }
   },
   dismissLadderPrompt(s) { s.ladderPrompt = false; },
+  setCauseHunger(s, now) { s.stats.causesFound.push({ label: '배고픔', at: now }); },
   setCause(s, now, payload) {
     s.fixingCause = payload;
     const c = CAUSES.find((x) => x.id === payload);
@@ -568,9 +582,21 @@ function globalEmergency(flagId) { // 위험신호 오버레이에서 발견
 /* 자동 전이 평가 (1초 틱 + visibilitychange 에서 호출) */
 function evalAuto() {
   if (!S || S.ended) return;
-  const def = MACHINE[S.state];
-  if (!def.auto) return;
   const now = Date.now();
+  // 소강 유예 만료: 잠잠이 5분 이상 이어지면 연속 울음 에피소드 종료로 확정
+  if (!S.cryType && S.nonstopCrySince && S.nonstopQuietAt && now - S.nonstopQuietAt >= T.NONSTOP_GRACE) {
+    S.nonstopCrySince = null;
+    S.nonstopQuietAt = null;
+    save();
+  }
+  const def = MACHINE[S.state];
+  // 전역: 연속 울음 2시간 → 응급 (Seattle Children's) — 상태와 무관하게 발동.
+  // 단, 우는 중일 때만: 소강(유예) 중에 조용한 아기 앞에서 응급 화면이 뜨지 않도록. 재개되면 즉시 발동된다.
+  if (!def.final && S.cryType && S.nonstopCrySince && now - S.nonstopCrySince >= T.NONSTOP_EMERGENCY) {
+    transition({ target: 'emergency', action: 'setNonstopFlag' }, now);
+    return;
+  }
+  if (!def.auto) return;
   for (const a of def.auto) {
     if (a.cond(S, now)) {
       transition({ target: a.target, action: a.action }, now);
@@ -643,6 +669,16 @@ function cryWidget(startLabel) {
   }
   return btn('CRY_HARD_START', startLabel, 'btn-cry');
 }
+/* 체온 그룹 전용 렌더링: 촉진 1차(매번) → 측정 2차(1차 해당 시에만) */
+function tempGroupHtml(flagEvent) {
+  return '<li><div class="group-name">체온 — 만져보기 먼저</div>' +
+    '<div class="item-check">등·가슴을 만졌을 때 평소보다 뜨겁나요? 몸통이 차갑거나, 얼굴·입술이 창백·얼룩덜룩한가요? 우는데도 얼굴이 빨개지지 않고 창백하면 특히 주의하세요. 뜨겁게 느껴지지 않으면 매번 잴 필요는 없습니다.</div>' +
+    '<details><summary>해당되면 열기 — 체온 재기 (겨드랑이 측정이 안전)</summary>' +
+    '<button type="button" class="item-btn" data-event="' + flagEvent + '" data-payload="fever">38.0°C 이상 — 해열제를 먼저 먹이지 마세요</button>' +
+    '<div class="item-check" style="margin-top:8px">36.0°C 미만이면: 아파 보이면(축 처짐·수유 거부) 바로 누르세요. 아파 보이지 않으면 한 겹 더 입히고 15~20분 후 재측정하세요.</div>' +
+    '<button type="button" class="item-btn" data-event="' + flagEvent + '" data-payload="hypothermia">36.0°C 미만 — 아파 보이거나, 재측정에도 낮음</button>' +
+    '</details></li>';
+}
 function prepDots(current) {
   const idx = PREP_STEPS.indexOf(current);
   return '<div class="stepdots">' + PREP_STEPS.map((p, i) =>
@@ -653,8 +689,9 @@ function prepDots(current) {
 const SCREENS = {
   bath() {
     return prepDots('bath') + '<div class="stage-label">준비 1 / 5</div><h1>목욕</h1>' +
-      '<p class="guide">따뜻한 물로 짧게 목욕시키세요. 목욕은 매일 같은 순서로 반복되는 <strong>수면의식의 시작 신호</strong>입니다.</p>' +
-      btn('NEXT', '목욕 완료', 'btn-primary') + cryWidget('크게 울면서 목욕 중이에요') + refsHtml(['ttokgeRoutine']);
+      '<p class="guide">따뜻한 물로 짧게 목욕시키세요. 매일 같은 순서로 반복되는 <strong>수면의식의 시작 신호</strong>입니다.</p>' +
+      '<div class="note">목욕은 매일 할 필요는 없습니다(주 3회면 충분). 목욕하지 않는 날은 따뜻한 물수건으로 얼굴·목·손·엉덩이만 닦아 주고, 나머지 의식은 같은 순서로 진행하세요.</div>' +
+      btn('NEXT', '목욕(또는 닦기) 완료', 'btn-primary') + cryWidget('크게 울면서 목욕 중이에요') + refsHtml(['ttokgeRoutine', 'aapBathing', 'nhsWashing']);
   },
   dress() {
     return prepDots('dress') + '<div class="stage-label">준비 2 / 5</div><h1>기저귀·수면복</h1>' +
@@ -687,13 +724,13 @@ const SCREENS = {
     if (S.hiccupNote) banner = '<div class="note">딸꾹질은 개입하지 않습니다. 아무것도 하지 않고 그대로 두세요.</div>';
     else if (S.settledVia === 'ladder' || S.settledVia === 'handoff') banner = '<div class="note">진정계단은 1번부터 다시 시작합니다. 우선 눕히고 상태를 지켜보세요.</div>';
     return '<div class="stage-label">눕히기</div><h1>침대에 눕히세요</h1>' +
-      '<p class="guide"><strong>졸리지만 깨어 있는 상태</strong>로, 평평한 침대에 등을 대고 눕히세요. 경사면 수면은 금지입니다.</p>' + banner +
+      '<p class="guide"><strong>졸리지만 깨어 있는 상태</strong>로 눕히는 것을 목표로 하되, 이 시기에는 안겨서·먹다가 잠들어도 괜찮습니다. 평평한 침대에 등을 대고 눕히세요. 경사면 수면은 금지입니다.</p>' + banner +
       '<p class="guide" style="font-size:14px;color:var(--text-dim)">아기 상태를 선택하세요.</p>' +
       btn('QUIET', '조용함', 'btn-calm') +
       btn('HICCUP', '딸꾹질만 함', '') +
       btn('FUSSY', '칭얼거림 · 가짜울음', '') +
       btn('HARD', '강성울음', 'btn-hard') +
-      refsHtml(['seattleReflux', 'ttokgeDrowsy']);
+      refsHtml(['seattleReflux', 'ttokgeDrowsy', 'kidsHealthNbSleep']);
   },
   quiet(now) {
     const el = now - (S.quietSince || now);
@@ -707,15 +744,16 @@ const SCREENS = {
   fussing(now) {
     const el = now - S.stateSince;
     return '<div class="stage-label">관찰</div><h1>칭얼거림 — 개입하지 않기</h1>' +
-      '<p class="guide">개입하지 않고 지켜보세요. 특별한 문제가 없으면 잠들기 전 울음은 <strong>15~20분까지 무해</strong>합니다. 20분이 지나면 원인 체크로 넘어갑니다.</p>' +
-      '<div class="bigtimer"><span data-timer="fussing">' + fmtClock(el) + '</span><span class="sub">칭얼거림 경과 / 20:00</span></div>' +
+      '<p class="guide">개입하지 않고 지켜보세요. 대한소아청소년과학회는 눕힌 뒤 <strong>10~20분 정도의 칭얼거림</strong>을 정상 범위로 안내합니다. 앱은 보수적으로 10분이 지나면 원인 체크로 넘어갑니다. 강성울음으로 바뀌면 즉시 눌러 주세요.</p>' +
+      '<div class="bigtimer"><span data-timer="fussing">' + fmtClock(el) + '</span><span class="sub">칭얼거림 경과 / 10:00</span></div>' +
       btn('QUIET', '조용해짐', 'btn-calm') +
       btn('HARD', '강성울음으로 바뀜', 'btn-hard') +
-      refsHtml(['kidsHealthCry', 'ttokgeCry']);
+      refsHtml(['kpsSleep', 'kidsHealthCry']);
   },
   redflag() {
-    let list = '';
+    let list = tempGroupHtml('FLAG');
     for (const g of REDFLAGS) {
+      if (g.custom) continue;
       list += '<li><div class="group-name">' + esc(g.group) + '</div>' +
         g.items.map((it) =>
           '<button type="button" class="item-btn" data-event="FLAG" data-payload="' + it.id + '">' + esc(it.label) + '</button>'
@@ -724,24 +762,32 @@ const SCREENS = {
     return '<div class="stage-label">강성울음 — 위험신호 확인</div><h1>위험신호가 있나요?</h1>' +
       '<p class="guide">아래 항목을 빠르게 확인하세요. <strong>1분 안에</strong> 통과하는 것이 목표입니다. 해당 항목이 있으면 누르세요.</p>' +
       '<ul class="checklist">' + list + '</ul>' +
+      '<div class="note">이 목록에 없어도, "오늘은 평소와 다르다"는 직감이 강하게 들면 그 직감을 믿고 병원에 연락하세요.</div>' +
       btn('NONE', '해당 없음 — 원인 체크로', 'btn-primary') +
-      refsHtml(['seattleCrying', 'seattleEmerg']);
+      refsHtml(['seattleCrying', 'seattleEmerg', 'nhsFever', 'seattleNewborn', 'niceConcern']);
   },
-  causecheck() {
+  causecheck(now) {
     let list = '';
     CAUSES.forEach((c, i) => {
+      let checkText = c.check;
+      if (c.id === 'hunger' && S.lastFeedEndAt) {
+        const since = now - S.lastFeedEndAt;
+        checkText += ' 마지막 수유 후 ' + fmtDur(since) + (since >= T.REFEED_GATE ? ' — 90분이 지나 배고픔 가능성이 높습니다.' : '.');
+      }
+      const button = c.id === 'hunger'
+        ? '<button type="button" class="item-btn cause" data-event="HUNGRY">이게 원인 — 수유하러 가기</button>'
+        : '<button type="button" class="item-btn cause" data-event="FOUND" data-payload="' + c.id + '">이게 원인 — ' + esc(c.label) + '</button>';
       list += '<li><div class="group-name">' + (i + 1) + '. ' + esc(c.label) + '</div>' +
-        '<div class="item-check">' + esc(c.check) + '</div>' +
-        '<button type="button" class="item-btn cause" data-event="FOUND" data-payload="' + c.id + '">이게 원인 — ' + esc(c.label) + '</button></li>';
+        '<div class="item-check">' + esc(checkText) + '</div>' + button + '</li>';
     });
-    const nextHint = S.burpRetryUsed ? '배고픔 확인으로' : '트림 재시도로';
+    const nextHint = S.burpRetryUsed ? '진정계단으로' : '트림 재시도로';
     return '<div class="stage-label">원인 체크 (약 2분)</div><h1>순서대로 빠르게 확인</h1>' +
       '<ul class="checklist">' + list + '</ul>' +
       btn('NOTFOUND', '원인 못 찾음 — ' + nextHint, '') +
-      refsHtml(['kidsHealthCry', 'medlineCry']);
+      refsHtml(['kidsHealthCry', 'medlineCry', 'aapHernia']);
   },
   fixing() {
-    const c = CAUSES.find((x) => x.id === S.fixingCause) || CAUSES[0];
+    const c = CAUSES.find((x) => x.id === S.fixingCause && x.fix) || CAUSES[1];
     return '<div class="stage-label">원인 해결 — ' + esc(c.label) + '</div><h1>해결하기</h1>' +
       '<p class="guide">' + esc(c.fix) + '</p>' +
       btn('FIXED', '해결 완료 — 다시 눕히기', 'btn-primary') +
@@ -756,18 +802,6 @@ const SCREENS = {
       btn('DONE', '트림 완료 — 다시 눕히기', 'btn-primary') +
       cryWidget('크게 울면서 트림 중이에요') +
       refsHtml(['nhsReflux']);
-  },
-  hungergate(now) {
-    const feedInfo = S.lastFeedEndAt
-      ? '마지막 수유가 끝난 지 <strong>' + esc(fmtDur(now - S.lastFeedEndAt)) + '</strong> 지났습니다 (90분 미만).'
-      : '마지막 수유 시각이 기록되어 있지 않습니다.';
-    return '<div class="stage-label">배고픔 확인</div><h1>배고픔 신호가 있나요?</h1>' +
-      '<p class="guide">' + feedInfo + '</p>' +
-      '<p class="guide">입을 벌려 젖을 찾거나(루팅), 손을 빠는지 확인하세요.</p>' +
-      '<div class="note">애매하면 공갈젖꼭지를 2~3분 물려 보세요. 쪽쪽이로 진정되면 배고픔이 아닙니다.</div>' +
-      btn('HUNGRY', '배고픔 신호 있음 — 수유하기', 'btn-primary') +
-      btn('NOTHUNGRY', '배고픔 아님 — 진정계단으로', '') +
-      refsHtml(['kidsHealthCry', 'medlineCry']);
   },
   refeed(now) {
     const via = S.lastFeedEndAt && now - S.lastFeedEndAt >= T.REFEED_GATE
@@ -807,27 +841,32 @@ const SCREENS = {
     let actions;
     if (S.ladderStep < 7) {
       actions = btn('CALMED', '진정됨 — 다시 눕히기', 'btn-calm') +
-        btn('NEXTSTEP', '다음 칸: ' + LADDER[S.ladderStep].title, ready ? 'btn-pulse' : '', '2분간 반응이 없을 때 넘어가세요');
+        btn('NEXTSTEP', '다음 칸: ' + LADDER[S.ladderStep].title, ready ? 'btn-pulse' : '', '2분간 반응이 없을 때 넘어가세요') +
+        btn('HUNGRY', '배고픔 신호가 보여요 — 수유하기', 'btn-quiet', '루팅·손 빨기·입 오물거림이 보이면 계단과 무관하게 수유');
     } else {
       actions = btn('L7_FED_CALM', '수유로 진정됨 — 다시 눕히기', 'btn-calm', '수유 종료 시각이 갱신됩니다') +
         btn('L7_FAIL', '수유해도 진정 안 됨', 'btn-hard');
     }
+    const refKeys = S.ladderStep === 7
+      ? ['unicefFeeding', 'tresillian', 'ttokgeLadder']
+      : ['tresillian', 'rcnSettling', 'aapSelfSoothe', 'ttokgeLadder'];
     return '<div class="stage-label">진정계단 ' + S.ladderStep + ' / 7</div>' + dots +
       '<h1>' + esc(step.title) + '</h1>' +
       '<p class="guide">' + esc(step.desc) + '</p>' +
       '<div class="bigtimer"><span data-timer="ladder">' + fmtClock(el) + '</span><span class="sub">이 칸 경과 — 칸당 2분 반응 관찰</span></div>' +
       prompt + actions +
-      refsHtml(['karp5S', 'ttokgeLadder']);
+      refsHtml(refKeys);
   },
   handoff(now) {
     const accum = hardCryAccum(S, now);
     return '<div class="stage-label">부모 교대 · 휴식</div><h1>잠시 멈추세요</h1>' +
       '<p class="guide">부모를 교대하세요. 혼자라면 아기를 침대에 <strong>안전히 등을 대고 눕히고</strong>, 5~10분 자리를 떠나 진정하세요.</p>' +
       '<div class="note danger">절대 아기를 흔들지 마세요.</div>' +
+      '<div class="note">이 시기(생후 2주~3개월)의 울음 증가는 정상 발달 과정입니다. 무엇을 해도 달래지지 않는 울음이 있는 것 역시 정상 범위이며, <strong>부모의 잘못이 아닙니다.</strong></div>' +
       '<p class="guide" style="font-size:14px;color:var(--text-dim)">누적 강성울음 ' + esc(fmtDur(accum)) +
       (S.nonstopCrySince ? ' · 연속 울음 ' + esc(fmtDur(now - S.nonstopCrySince)) + ' (2시간 이상 지속되면 병원 안내로 전환됩니다)' : '') + '</p>' +
       btn('RESUME', '진정됐어요 — 다시 눕히기', 'btn-calm', '진정계단은 1번부터 다시 시작') +
-      refsHtml(['kaiserHandoff']);
+      refsHtml(['kaiserHandoff', 'purpleCrying']);
   },
   asleep() {
     const st = S.stats;
@@ -870,7 +909,7 @@ const SCREENS = {
 
 /* ---------- 세션 외 화면: 시작 / 이어하기 / 수유 시각 입력 ---------- */
 function biblioHtml() {
-  const linked = ['nhsReflux', 'seattleReflux', 'seattleCrying', 'seattleEmerg', 'kidsHealthCry', 'medlineCry', 'karp5S', 'kaiserHandoff'];
+  const linked = ['kpsSleep', 'nhsReflux', 'seattleReflux', 'seattleCrying', 'seattleEmerg', 'seattleNewborn', 'nhsFever', 'niceConcern', 'kidsHealthCry', 'kidsHealthNbSleep', 'medlineCry', 'aapHernia', 'aapSelfSoothe', 'aapBathing', 'nhsWashing', 'tresillian', 'rcnSettling', 'unicefFeeding', 'karp5S', 'kaiserHandoff', 'purpleCrying'];
   let items = '<li>똑게육아 (책) — 수면의식 루틴, 진정계단</li>';
   for (const k of linked) {
     const r = REFS[k];
@@ -1001,8 +1040,9 @@ document.addEventListener('click', (e) => {
 
 /* ---------- 전역 오버레이: 위험신호 확인 / 부모 한계 ---------- */
 function openRedflagOverlay() {
-  let list = '';
+  let list = tempGroupHtml('OVERLAY_FLAG');
   for (const g of REDFLAGS) {
+    if (g.custom) continue;
     list += '<li><div class="group-name">' + esc(g.group) + '</div>' +
       g.items.map((it) =>
         '<button type="button" class="item-btn" data-event="OVERLAY_FLAG" data-payload="' + it.id + '">' + esc(it.label) + '</button>'
@@ -1011,8 +1051,9 @@ function openRedflagOverlay() {
   $overlayPanel.innerHTML = '<h1>위험신호 확인</h1>' +
     '<p class="guide">해당 항목이 있으면 누르세요. 현재 진행과 타이머는 그대로 유지됩니다.</p>' +
     '<ul class="checklist">' + list + '</ul>' +
+    '<div class="note">이 목록에 없어도, "오늘은 평소와 다르다"는 직감이 강하게 들면 그 직감을 믿고 병원에 연락하세요.</div>' +
     btn('OVERLAY_CLOSE', '해당 없음 — 돌아가기', 'btn-primary') +
-    refsHtml(['seattleCrying', 'seattleEmerg']);
+    refsHtml(['seattleCrying', 'seattleEmerg', 'nhsFever', 'seattleNewborn', 'niceConcern']);
   $overlay.classList.add('visible');
 }
 function openLimitOverlay() {
