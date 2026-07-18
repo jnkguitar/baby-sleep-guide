@@ -233,13 +233,13 @@
 /* ---------- 타이밍 파라미터 (스펙 표 1:1) ---------- */
 const MIN = 60 * 1000;
 const T = {
-  UPRIGHT_BURP: 10 * MIN,        // 수유 후 세워 안기 (기본)
-  UPRIGHT_BURP_SPITTY: 20 * MIN, // 게워냄이 잦은 아기
+  UPRIGHT_BURP: 10 * MIN,        // 수유 후 세워 안기 — AAP·KidsHealth '10~15분'의 하단
+  UPRIGHT_BURP_SPITTY: 20 * MIN, // 게워냄이 잦은 아기 — AAP '최소 20분' (역류 전용 자료 중심값은 30분)
   SLEEP_ASK: 10 * MIN,           // 조용 상태 무액션 10분마다 잠듦 확인 질문 (2026-07-17 사용자 결정 — 자동 확정 폐지)
   FUSSING_LIMIT: 10 * MIN,       // 칭얼거림 관찰 한도 — 대한소아청소년과학회 '10~20분 정상 범위'의 하한을 보수적으로 채택
   BURP_RETRY: 5 * MIN,           // 트림 재시도
   BURP_GATE: 30 * MIN,           // 트림 재시도 게이트: 마지막 수유 후 30분 이내만 (가스 가능성)
-  REFEED_BURP: 5 * MIN,          // 추가 수유 후 짧은 트림
+  REFEED_BURP: 5 * MIN,          // 추가 수유 후 짧은 트림 — 앱 절충값 (트림 시도 1~2분(NHS) + 짧은 안정. 기관별 밤중 전용 수치는 없음)
   REFEED_GATE: 90 * MIN,         // 90분 경과 시 '배고픔 가능성 높음' 힌트 (게이트 아님 — 신호가 있으면 언제든 수유)
   LADDER_STEP: 1 * MIN,          // 진정계단 다음 칸 힌트 — 1~2분 관찰 (기관 권고 '기법당 수 분'의 하한, 격한 울음 시 즉시 격상)
   HARD_CRY_LIMIT: 30 * MIN,      // 부모 교대 기준: 누적 강성울음 30분
@@ -265,7 +265,11 @@ const REFS = {
   kidsHealthNbSleep: { org: 'KidsHealth(미국 어린이 건강정보 사이트) "Sleep and Your Newborn"', summary: '신생아기는 안아 달래서 재워도 됨 — 버릇 걱정 불필요', url: 'https://kidshealth.org/en/parents/sleepnewborn.html' },
   aapBathing:     { org: 'AAP(미국소아과학회) HealthyChildren "Bathing Your Baby"', summary: '첫 1년은 주 3회 목욕이면 충분 — 잦은 목욕은 피부 건조 유발', url: 'https://www.healthychildren.org/English/ages-stages/baby/bathing-skin-care/Pages/Bathing-Your-Newborn.aspx' },
   nhsWashing:     { org: 'NHS(영국 국민보건서비스) "Washing and bathing your baby"', summary: '매일 목욕 불필요 — 얼굴·목·손·엉덩이 닦기(topping and tailing)로 대체', url: 'https://www.nhs.uk/conditions/baby/caring-for-a-newborn/washing-and-bathing-your-baby/' },
-  nhsReflux:      { org: 'NHS(영국 국민보건서비스) "Reflux in babies"', summary: '역류가 잦으면 수유 후 세워 안기 연장', url: 'https://www.nhs.uk/conditions/reflux-in-babies/' },
+  nhsReflux:      { org: 'NHS(영국 국민보건서비스) "Reflux in babies"', summary: '역류가 잦으면 수유 중·수유 후 가능한 한 오래 세워 안기', url: 'https://www.nhs.uk/conditions/reflux-in-babies/' },
+  kidsHealthBurp: { org: 'KidsHealth(미국 어린이 건강정보 사이트) "Burping Your Baby"', summary: '수유 후 10~15분 세워 안기 — 게움이 잦으면 더 길게', url: 'https://kidshealth.org/en/parents/burping.html' },
+  aapBurping:     { org: 'AAP(미국소아과학회) HealthyChildren "Baby Burping, Hiccups & Spit-Up"', summary: '수유 후 10~15분 세워 안기 — 트림은 매번 나오지 않아도 정상', url: 'https://www.healthychildren.org/English/ages-stages/baby/feeding-nutrition/Pages/baby-burping-hiccups-and-spit-up.aspx' },
+  aapSpitUp:      { org: 'AAP(미국소아과학회) HealthyChildren "Why Babies Spit Up"', summary: '게움이 잦으면 수유 후 최소 20분 세워 안기', url: 'https://www.healthychildren.org/English/ages-stages/baby/feeding-nutrition/Pages/Why-Babies-Spit-Up.aspx' },
+  nhsBurping:     { org: 'NHS(영국 국민보건서비스) "Burping your baby"', summary: '트림 시도는 1~2분이면 충분', url: 'https://www.nhs.uk/best-start-in-life/baby/feeding-your-baby/breastfeeding/how-to-breastfeed/burping-your-baby/' },
   seattleReflux:  { org: 'Seattle Children\'s(미국 시애틀 아동병원) "Reflux (Spitting Up)"', summary: '평평한 침대에 등을 대고 눕히기', url: 'https://www.seattlechildrens.org/conditions/a-z/reflux-spitting-up/' },
   kidsHealthCry:  { org: 'KidsHealth(미국 어린이 건강정보 사이트) "What to Do When Babies Cry"', summary: '울음 원인 확인과 대응', url: 'https://kidshealth.org/en/parents/babies-cry.html' },
   seattleCrying:  { org: 'Seattle Children\'s(미국 시애틀 아동병원) "Crying Baby - Before 3 Months Old"', summary: '3개월 미만 울음의 위험신호와 병원 기준', url: 'https://www.seattlechildrens.org/conditions/a-z/crying-baby---before-3-months-old/' },
@@ -759,13 +763,13 @@ const SCREENS = {
     const dur = burpDuration(S);
     const remain = Math.max(0, dur - (now - S.stateSince));
     return prepDots('burp') + '<div class="stage-label">준비 5 / 5</div><h1>세워 안고 트림</h1>' +
-      '<p class="guide">세워 안고 트림시키세요. 등을 아래에서 위로 쓸어올리거나 가볍게 두드립니다.</p>' +
+      '<p class="guide">세워 안고 트림시키세요. 등을 아래에서 위로 쓸어올리거나 가볍게 두드립니다. 트림 시도는 <strong>1~2분이면 충분</strong>하고 안 나와도 괜찮습니다 — 남은 시간은 세워 안고만 있으면 됩니다.</p>' +
       '<div class="bigtimer"><span data-timer="burp">' + fmtClock(remain) + '</span><span class="sub">남은 시간 — 끝나면 자동으로 눕히기 단계로 넘어갑니다</span></div>' +
       btn('TOGGLE_SPITTY', S.spitty ? '게워냄이 잦은 아기: 켜짐 (20분)' : '게워냄이 잦은 아기: 꺼짐 (10분)', 'btn-quiet') +
       btn('DONE', '트림 완료 — 눕히러 가기', 'btn-primary') +
       cryWidget('크게 울면서 트림 중이에요') +
       btn('BACK', '이전 단계로 (수유)', 'btn-quiet', '다시 수유하면 종료 시각이 새로 기록됩니다') +
-      refsHtml(['nhsReflux']);
+      refsHtml(['kidsHealthBurp', 'aapSpitUp', 'nhsBurping']);
   },
   settling() {
     let banner = '';
@@ -882,10 +886,10 @@ const SCREENS = {
   refeedburp(now) {
     const remain = Math.max(0, T.REFEED_BURP - (now - S.stateSince));
     return '<div class="stage-label">추가 수유 후</div><h1>짧은 트림</h1>' +
-      '<p class="guide">세워 안고 짧게 트림시키세요.</p>' +
+      '<p class="guide">세워 안고 <strong>1~2분 정도</strong> 트림을 시도하세요. 트림이 안 나와도 걱정하지 않아도 됩니다. 남은 시간은 세워 안고 진정시키면 됩니다. 게워냄이 잦은 아기라면 더 길게 세워 안아 주세요.</p>' +
       '<div class="bigtimer"><span data-timer="refeedburp">' + fmtClock(remain) + '</span><span class="sub">남은 시간 — 끝나면 자동으로 다시 눕히기로</span></div>' +
       btn('DONE', '트림 완료 — 다시 눕히기', 'btn-primary') +
-      refsHtml(['nhsReflux']);
+      refsHtml(['nhsBurping', 'aapBurping']);
   },
   ladder(now) {
     const step = LADDER[S.ladderStep - 1];
@@ -970,7 +974,7 @@ const SCREENS = {
 
 /* ---------- 세션 외 화면: 시작 / 이어하기 / 수유 시각 입력 ---------- */
 function biblioHtml() {
-  const linked = ['kpsSleep', 'mindellRoutine', 'karitane', 'nhsReflux', 'seattleReflux', 'seattleCrying', 'seattleEmerg', 'seattleNewborn', 'nhsFever', 'niceConcern', 'kidsHealthCry', 'kidsHealthNbSleep', 'medlineCry', 'aapHernia', 'aapSelfSoothe', 'aapBathing', 'nhsWashing', 'tresillian', 'rcnSettling', 'rchSettling', 'unicefFeeding', 'karp5S', 'kaiserHandoff', 'purpleCrying'];
+  const linked = ['kpsSleep', 'mindellRoutine', 'karitane', 'kidsHealthBurp', 'aapBurping', 'aapSpitUp', 'nhsBurping', 'nhsReflux', 'seattleReflux', 'seattleCrying', 'seattleEmerg', 'seattleNewborn', 'nhsFever', 'niceConcern', 'kidsHealthCry', 'kidsHealthNbSleep', 'medlineCry', 'aapHernia', 'aapSelfSoothe', 'aapBathing', 'nhsWashing', 'tresillian', 'rcnSettling', 'rchSettling', 'unicefFeeding', 'karp5S', 'kaiserHandoff', 'purpleCrying'];
   let items = '<li>똑게육아 (책) — 수면의식 루틴, 진정계단</li>';
   for (const k of linked) {
     const r = REFS[k];
