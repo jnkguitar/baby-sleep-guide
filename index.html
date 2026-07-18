@@ -154,7 +154,11 @@
   .refs { margin-top: 26px; padding-top: 12px; border-top: 1px solid var(--line); }
   .refs p { font-size: 12px; color: var(--text-faint); margin-bottom: 4px; }
   .refs a { color: var(--text-faint); text-decoration: underline; text-underline-offset: 2px; }
-  .disclaimer { font-size: 12px; color: var(--text-faint); margin-top: 14px; }
+  .disclaimer {
+    font-size: 12.5px; color: var(--danger); margin-top: 14px;
+    background: var(--danger-bg); border: 1px solid var(--danger);
+    border-radius: 8px; padding: 9px 12px;
+  }
   .brand { text-align: center; margin: 34px 0 6px; }
   .brand .name { font-size: 40px; font-weight: 800; color: #d7dce1; letter-spacing: 2px; }
   .brand .by { font-size: 20px; font-weight: 600; color: var(--text-dim); letter-spacing: 0; margin-left: 8px; }
@@ -309,7 +313,7 @@ function findFlag(id) {
 
 /* ---------- 원인 체크 (순서 있는 체크리스트 — 배고픔이 1번: NHS·Mayo·KidsHealth 표준 순서) ---------- */
 const CAUSES = [
-  { id: 'hunger', label: '배고픔', check: '입을 벌려 젖을 찾거나(루팅), 손을 빨거나, 입을 오물거리는지 확인하세요.',
+  { id: 'hunger', label: '배고픔', check: '입 근처를 건드리면 그쪽으로 고개를 돌려 입을 벌리는지(젖찾기 반사), 손을 빠는지, 입을 오물거리는지 확인하세요.',
     fix: null }, // 배고픔은 fixing이 아니라 refeed로 직행 (HUNGRY 이벤트)
   { id: 'diaper', label: '기저귀', check: '기저귀가 젖었거나 대변을 봤는지 확인하세요. 기저귀를 연 김에 사타구니·음낭이 부어 있는지도 보세요 — 부어 있으면 즉시 진료가 필요합니다.',
     fix: '조명을 최대한 낮추고 조용히 기저귀를 갈아 주세요. 말을 걸거나 눈을 맞추지 않습니다.' },
@@ -899,7 +903,7 @@ const SCREENS = {
     if (S.ladderStep < 7) {
       actions = btn('CALMED', '진정됨 — 다시 눕히기', 'btn-calm') +
         btn('NEXTSTEP', '다음 칸: ' + LADDER[S.ladderStep].title, ready ? 'btn-pulse' : '', '1~2분 반응이 없거나, 울음이 격해지면 바로 넘어가세요') +
-        btn('HUNGRY', '배고픔 신호가 보여요 — 수유하기', 'btn-quiet', '루팅·손 빨기·입 오물거림이 보이면 계단과 무관하게 수유');
+        btn('HUNGRY', '배고픔 신호가 보여요 — 수유하기', 'btn-quiet', '젖찾기·손 빨기·입 오물거림이 보이면 계단과 무관하게 수유');
     } else {
       actions = btn('L7_FED_CALM', '수유로 진정됨 — 다시 눕히기', 'btn-calm', '수유 종료 시각이 갱신됩니다') +
         btn('L7_FAIL', '수유해도 진정 안 됨', 'btn-hard');
