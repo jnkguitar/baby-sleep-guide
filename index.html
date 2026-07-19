@@ -244,7 +244,7 @@ const T = {
   HARD_CRY_LIMIT: 30 * MIN,      // 부모 교대 기준: 누적 강성울음 30분
   NONSTOP_WARN: 90 * MIN,        // 연속 울음 90분 경고
   NONSTOP_EMERGENCY: 120 * MIN,  // 병원 기준: 연속 울음 2시간 (Seattle Children's)
-  NONSTOP_GRACE: 5 * MIN,        // 연속 울음 소강 유예: 5분 미만의 잠잠은 같은 에피소드로 본다
+  NONSTOP_GRACE: 5 * MIN,        // 연속 울음 소강 유예: 5분 미만의 잠잠은 같은 에피소드 (단, 조용한 시간은 집계 제외 — 타이머 정지)
 };
 
 /* ---------- 근거 출처 (매핑 외 URL 금지 · 책은 텍스트만) ---------- */
@@ -473,8 +473,9 @@ function newSession(startState, lastFeedEndAt, now) {
     burpRetryUsed: false,
     hardCryAccumBase: 0,         // 누적 강성울음(ms) — 확정 누적분
     hardCrySince: null,          // 진행 중 강성울음 시작 시각
-    nonstopCrySince: null,       // 연속 울음 시작 시각 (병원 2시간 기준) — 누적과 별개
-    nonstopQuietAt: null,        // 연속 울음 중 소강 시작 시각 (5분 유예 판정용)
+    nonstopAccumBase: 0,         // 연속 울음 확정 누적분(ms) — 소강 시 여기로 접어 두고 타이머 정지
+    nonstopCrySince: null,       // 진행 중 울음 구간 시작 시각 (병원 2시간 기준) — 강성 누적과 별개
+    nonstopQuietAt: null,        // 소강 시작 시각 (5분 유예 판정용 — 5분 내 재개 시 누적 이어감)
     cryType: null,               // null | 'fussy' | 'hard'
     ladderStep: 1,               // 재진입 시 항상 1로 리셋
     ladderPrompt: false,         // L4 완료 시점 원인 재체크 프롬프트
@@ -494,6 +495,12 @@ function newSession(startState, lastFeedEndAt, now) {
 function hardCryAccum(s, now) {
   return s.hardCryAccumBase + (s.hardCrySince ? now - s.hardCrySince : 0);
 }
+function nonstopCryDur(s, now) { // 연속 울음 = 울고 있던 시간의 누적 (소강 중엔 멈춤)
+  return (s.nonstopAccumBase || 0) + (s.nonstopCrySince ? now - s.nonstopCrySince : 0);
+}
+function nonstopActive(s) { // 진행 중이거나 유예 내 소강 중
+  return !!(s.nonstopCrySince || s.nonstopQuietAt);
+}
 
 /* ---------- 울음 추적: 연속(nonstop)과 누적(hardCryAccum)은 별개 ---------- */
 function setCry(s, type, now) {
@@ -510,11 +517,18 @@ function setCry(s, type, now) {
   // 새 구간 시작
   if (type) {
     segs.push({ type: type, start: now, end: null });
-    if (!s.nonstopCrySince) s.nonstopCrySince = now;
-    s.nonstopQuietAt = null; // 유예 내 재개 → 연속 울음 이어서 집계
+    if (!s.nonstopCrySince) {
+      // 유예(5분) 내 재개면 멈췄던 누적에서 이어가고, 아니면 새 에피소드
+      if (!(s.nonstopQuietAt && now - s.nonstopQuietAt < T.NONSTOP_GRACE)) s.nonstopAccumBase = 0;
+      s.nonstopCrySince = now;
+    }
+    s.nonstopQuietAt = null;
     if (type === 'hard') s.hardCrySince = now;
   } else if (s.nonstopCrySince) {
-    s.nonstopQuietAt = now; // 즉시 리셋하지 않음 — 5분 이상 잠잠해야 에피소드 종료 (evalAuto에서 확정)
+    // 소강: 타이머 즉시 정지 — 조용한 시간은 집계하지 않고, 5분 이상 이어지면 에피소드 종료 (evalAuto)
+    s.nonstopAccumBase += now - s.nonstopCrySince;
+    s.nonstopCrySince = null;
+    s.nonstopQuietAt = now;
   }
   s.cryType = type;
 }
@@ -525,8 +539,8 @@ const ACTIONS = {
   refeedEnd(s, now) { s.lastFeedEndAt = now; s.burpRetryUsed = false; s.feedPausedCry = null; }, // 새 수유 = 새 가스 가능성
   pauseCryForFeed(s, now) {
     if (s.cryType) {
-      s.feedPausedCry = { type: s.cryType, nonstopSince: s.nonstopCrySince, pausedAt: now };
-      setCry(s, null, now);
+      s.feedPausedCry = { type: s.cryType, pausedAt: now };
+      setCry(s, null, now); // 누적은 nonstopAccumBase에 보존됨
     } else {
       s.feedPausedCry = null;
     }
@@ -534,8 +548,7 @@ const ACTIONS = {
   resumeCryDuringFeed(s, now) {
     const p = s.feedPausedCry;
     if (!p) return;
-    setCry(s, p.type, p.pausedAt);      // 수유 시작 시점부터 소급해 이어서 집계
-    s.nonstopCrySince = p.nonstopSince; // 연속 울음도 끊기지 않은 것으로 복원
+    setCry(s, p.type, p.pausedAt); // 수유 시작 시점부터 소급 — 유예 내 재개라 누적이 그대로 이어진다
     s.feedPausedCry = null;
   },
   feedEndAndCalm(s, now) { s.lastFeedEndAt = now; setCry(s, null, now); },
@@ -629,15 +642,16 @@ function evalAuto() {
   if (!S || S.ended) return;
   const now = Date.now();
   // 소강 유예 만료: 잠잠이 5분 이상 이어지면 연속 울음 에피소드 종료로 확정
-  if (!S.cryType && S.nonstopCrySince && S.nonstopQuietAt && now - S.nonstopQuietAt >= T.NONSTOP_GRACE) {
-    S.nonstopCrySince = null;
+  // (수유 중 일시정지 상태에서는 보류 — [계속 울면서 먹고 있어요] 소급 복원을 위해)
+  if (!S.cryType && S.nonstopQuietAt && !S.feedPausedCry && now - S.nonstopQuietAt >= T.NONSTOP_GRACE) {
+    S.nonstopAccumBase = 0;
     S.nonstopQuietAt = null;
     save();
   }
   const def = MACHINE[S.state];
   // 전역: 연속 울음 2시간 → 응급 (Seattle Children's) — 상태와 무관하게 발동.
   // 단, 우는 중일 때만: 소강(유예) 중에 조용한 아기 앞에서 응급 화면이 뜨지 않도록. 재개되면 즉시 발동된다.
-  if (!def.final && S.cryType && S.nonstopCrySince && now - S.nonstopCrySince >= T.NONSTOP_EMERGENCY) {
+  if (!def.final && S.cryType && nonstopCryDur(S, now) >= T.NONSTOP_EMERGENCY) {
     transition({ target: 'emergency', action: 'setNonstopFlag' }, now);
     return;
   }
@@ -660,6 +674,7 @@ function loadSaved() {
     if (!raw) return null;
     const s = JSON.parse(raw);
     if (!s || !MACHINE[s.state]) return null;
+    if (typeof s.nonstopAccumBase !== 'number') s.nonstopAccumBase = 0; // 구버전 세션 호환
     return s;
   } catch (e) { return null; }
 }
@@ -926,7 +941,7 @@ const SCREENS = {
       '<div class="note danger">절대 아기를 흔들지 마세요.</div>' +
       '<div class="note">이 시기(생후 2주~3개월)의 울음 증가는 정상 발달 과정입니다. 무엇을 해도 달래지지 않는 울음이 있는 것 역시 정상 범위이며, <strong>부모의 잘못이 아닙니다.</strong></div>' +
       '<p class="guide" style="font-size:14px;color:var(--text-dim)">누적 강성울음 ' + esc(fmtDur(accum)) +
-      (S.nonstopCrySince ? ' · 연속 울음 ' + esc(fmtDur(now - S.nonstopCrySince)) + ' (2시간 이상 지속되면 병원 안내로 전환됩니다)' : '') + '</p>' +
+      (nonstopActive(S) ? ' · 연속 울음 ' + esc(fmtDur(nonstopCryDur(S, now))) + ' (2시간 이상 지속되면 병원 안내로 전환됩니다)' : '') + '</p>' +
       btn('RESUME', '진정됐어요 — 다시 눕히기', 'btn-calm', '진정계단은 1번부터 다시 시작') +
       refsHtml(['kaiserHandoff', 'purpleCrying']);
   },
@@ -1035,7 +1050,7 @@ function tickDisplay() {
     const accum = hardCryAccum(S, now);
     document.getElementById('tvHard').textContent = fmtClock(accum);
     document.getElementById('tbHard').classList.toggle('warn-hard', accum >= T.HARD_CRY_LIMIT);
-    const nonstop = S.nonstopCrySince ? now - S.nonstopCrySince : null;
+    const nonstop = nonstopActive(S) ? nonstopCryDur(S, now) : null;
     document.getElementById('tvNonstop').textContent = nonstop !== null ? fmtClock(nonstop) : '—';
     document.getElementById('tbNonstop').classList.toggle('warn', nonstop !== null && nonstop >= T.NONSTOP_WARN);
     document.getElementById('nonstopWarn').classList.toggle('visible', nonstop !== null && nonstop >= T.NONSTOP_WARN);
