@@ -249,9 +249,7 @@ const T = {
 
 /* ---------- 근거 출처 (매핑 외 URL 금지 · 책은 텍스트만) ---------- */
 const REFS = {
-  ttokgeRoutine:  { text: '책: 똑게육아 — 일정한 수면의식 루틴' },
-  ttokgeDrowsy:   { text: '책: 똑게육아 — 졸리지만 깨어 있는 상태로 눕히기' },
-  ttokgeLadder:   { text: '책: 똑게육아 p.262 — 진정계단' },
+  kpsDrowsy:      { org: '대한소아청소년과학회 "우리 아이 올바른 수면교육"', summary: '약간 깨어 있지만 졸린 상태에서 침대에 내려놓기', url: 'https://www.pediatrics.or.kr/bbs/index.html?code=infantcare&category=A&gubun=E&page=1&number=8808&mode=view' },
   kpsSleep:       { org: '대한소아청소년과학회 "우리 아이 올바른 수면교육"', summary: '눕힌 뒤 10~20분 칭얼거림은 정상 — 먼저 스스로 잠들 수 있는지 지켜보기', url: 'https://www.pediatrics.or.kr/bbs/index.html?code=infantcare&category=A&gubun=E&page=1&number=8808&mode=view' },
   nhsFever:       { org: 'NHS(영국 국민보건서비스) "High temperature (fever) in children"', summary: '등·가슴이 평소보다 뜨겁게 느껴지거나 아파 보일 때 체온 측정', url: 'https://www.nhs.uk/symptoms/fever-in-children/' },
   seattleNewborn: { org: 'Seattle Children\'s(미국 시애틀 아동병원) "Newborn Illness - How to Recognize"', summary: '직장 36.0°C 미만이 보온에도 오르지 않으면 즉시 진료', url: 'https://www.seattlechildrens.org/conditions/a-z/newborn-illness---how-to-recognize/' },
@@ -738,25 +736,25 @@ const SCREENS = {
     return prepDots('bath') + '<div class="stage-label">준비 1 / 5</div><h1>목욕</h1>' +
       '<p class="guide">따뜻한 물로 짧게 목욕시키세요. 매일 같은 순서로 반복되는 <strong>수면의식의 시작 신호</strong>입니다.</p>' +
       '<div class="note">목욕은 매일 할 필요는 없습니다(주 3회면 충분). 목욕하지 않는 날은 따뜻한 물수건으로 얼굴·목·손·엉덩이만 닦아 주고, 나머지 의식은 같은 순서로 진행하세요.</div>' +
-      btn('NEXT', '목욕(또는 닦기) 완료', 'btn-primary') + cryWidget('크게 울면서 목욕 중이에요') + refsHtml(['ttokgeRoutine', 'aapBathing', 'nhsWashing']);
+      btn('NEXT', '목욕(또는 닦기) 완료', 'btn-primary') + cryWidget('크게 울면서 목욕 중이에요') + refsHtml(['mindellRoutine', 'aapBathing', 'nhsWashing']);
   },
   dress() {
     return prepDots('dress') + '<div class="stage-label">준비 2 / 5</div><h1>기저귀·수면복</h1>' +
       '<p class="guide">새 기저귀로 갈고 수면복(또는 스와들)을 입히세요.</p>' +
       btn('NEXT', '입히기 완료', 'btn-primary') + cryWidget('크게 울면서 입히는 중이에요') +
-      btn('BACK', '이전 단계로 (목욕)', 'btn-quiet') + refsHtml(['ttokgeRoutine']);
+      btn('BACK', '이전 단계로 (목욕)', 'btn-quiet') + refsHtml(['mindellRoutine']);
   },
   move() {
     return prepDots('move') + '<div class="stage-label">준비 3 / 5</div><h1>수면 공간으로 이동</h1>' +
       '<p class="guide">조명을 낮춘 어두운 수면 공간으로 이동하세요. 지금부터는 <strong>조용하고 지루하게</strong> 진행합니다. 말 걸기·눈 맞춤을 줄이세요.</p>' +
       btn('NEXT', '이동 완료', 'btn-primary') + cryWidget('크게 울면서 이동 중이에요') +
-      btn('BACK', '이전 단계로 (기저귀·수면복)', 'btn-quiet') + refsHtml(['ttokgeRoutine']);
+      btn('BACK', '이전 단계로 (기저귀·수면복)', 'btn-quiet') + refsHtml(['mindellRoutine']);
   },
   feed() {
     return prepDots('feed') + '<div class="stage-label">준비 4 / 5</div><h1>마지막 수유</h1>' +
       '<p class="guide">조용히 마지막 수유를 하세요. 자극 없이, 어둡게.</p>' +
       btn('NEXT', '수유 끝', 'btn-primary', '수유 종료 시각이 기록됩니다') + cryWidget('크게 울면서 먹고 있어요') +
-      btn('BACK', '이전 단계로 (이동)', 'btn-quiet') + refsHtml(['ttokgeRoutine']);
+      btn('BACK', '이전 단계로 (이동)', 'btn-quiet') + refsHtml(['mindellRoutine']);
   },
   burp(now) {
     const dur = burpDuration(S);
@@ -781,7 +779,7 @@ const SCREENS = {
       btn('HICCUP', '딸꾹질만 함', '') +
       btn('FUSSY', '칭얼거림 · 가짜울음', '') +
       btn('HARD', '강성울음', 'btn-hard') +
-      refsHtml(['seattleReflux', 'ttokgeDrowsy', 'kidsHealthNbSleep']);
+      refsHtml(['seattleReflux', 'kpsDrowsy', 'karitane', 'kidsHealthNbSleep']);
   },
   quiet(now) {
     const el = now - (S.quietSince || now);
@@ -791,7 +789,7 @@ const SCREENS = {
       btn('ASLEEP', '잠들었음', 'btn-calm') +
       btn('FUSSY', '칭얼거리기 시작', '') +
       btn('HARD', '강성울음 시작', 'btn-hard') +
-      refsHtml(['seattleReflux', 'ttokgeDrowsy']);
+      refsHtml(['seattleReflux', 'kpsDrowsy']);
   },
   sleepcheck(now) {
     const el = now - (S.quietSince || now);
@@ -802,7 +800,7 @@ const SCREENS = {
       btn('NOTASLEEP', '잠들지 않았음 — 계속 지켜보기', '') +
       btn('FUSSY', '칭얼거리기 시작', '') +
       btn('HARD', '강성울음 시작', 'btn-hard') +
-      refsHtml(['seattleReflux', 'ttokgeDrowsy']);
+      refsHtml(['seattleReflux', 'kpsDrowsy']);
   },
   fussing(now) {
     const el = now - S.stateSince;
@@ -912,8 +910,8 @@ const SCREENS = {
         btn('L7_FAIL', '수유해도 진정 안 됨', 'btn-hard');
     }
     const refKeys = S.ladderStep === 7
-      ? ['unicefFeeding', 'tresillian', 'ttokgeLadder']
-      : ['tresillian', 'aapSelfSoothe', 'rchSettling', 'ttokgeLadder'];
+      ? ['unicefFeeding', 'tresillian', 'rcnSettling']
+      : ['tresillian', 'aapSelfSoothe', 'rchSettling'];
     return '<div class="stage-label">진정계단 ' + S.ladderStep + ' / 7</div>' + dots +
       '<h1>' + esc(step.title) + '</h1>' +
       '<p class="guide">' + esc(step.desc) + '</p>' +
@@ -974,7 +972,7 @@ const SCREENS = {
 /* ---------- 세션 외 화면: 시작 / 이어하기 / 수유 시각 입력 ---------- */
 function biblioHtml() {
   const linked = ['kpsSleep', 'mindellRoutine', 'karitane', 'kidsHealthBurp', 'aapBurping', 'aapSpitUp', 'nhsBurping', 'nhsReflux', 'seattleReflux', 'seattleCrying', 'seattleEmerg', 'seattleNewborn', 'nhsFever', 'niceConcern', 'kidsHealthCry', 'kidsHealthNbSleep', 'medlineCry', 'aapHernia', 'aapSelfSoothe', 'aapBathing', 'nhsWashing', 'tresillian', 'rcnSettling', 'rchSettling', 'unicefFeeding', 'karp5S', 'kaiserHandoff', 'purpleCrying'];
-  let items = '<li>똑게육아 (책) — 수면의식 루틴, 진정계단</li>';
+  let items = '';
   for (const k of linked) {
     const r = REFS[k];
     items += '<li><a href="' + r.url + '" target="_blank" rel="noopener">' + esc(r.org) + '</a> — ' + esc(r.summary) + '</li>';

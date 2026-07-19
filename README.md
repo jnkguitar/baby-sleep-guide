@@ -38,7 +38,7 @@
   연구원, Seattle Children's 미국 시애틀 아동병원, AAP 미국소아과학회
   (HealthyChildren), KidsHealth, MedlinePlus 미국 국립의학도서관,
   UNICEF Baby Friendly, Tresillian·Raising Children Network 호주 정부 지원
-  기관, Harvey Karp 미국 소아과 전문의, Kaiser Permanente, 똑게육아)
+  기관, Harvey Karp 미국 소아과 전문의, Kaiser Permanente)
 - **전역 안전 버튼**: 어느 화면에서든 [위험신호 확인]·[부모 한계]·[처음부터]
   접근 가능. 의식 없음·무호흡·청색증 시 119 안내 최우선 표시. 체온은
   촉진(만져보기) 1차 → 해당 시에만 측정 2차의 2단계 스크리닝
